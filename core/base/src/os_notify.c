@@ -18,7 +18,7 @@
 #include "os_init.h"
 #include "private/os_poll_priv.h"
 
-static void os_drain_pollset(short when, os_socket_t fd, void *data);
+PRIVATE void os_drain_pollset(short when, os_socket_t fd, void *data);
 
 void os_notify_init(os_pollset_t *pollset)
 {
@@ -78,7 +78,7 @@ int os_notify_pollset(os_pollset_t *pollset)
     return OS_OK;
 }
 
-static void os_drain_pollset(short when, os_socket_t fd, void *data)
+PRIVATE void os_drain_pollset(short when, os_socket_t fd, void *data)
 {
     ssize_t r;
 #if defined(HAVE_EVENTFD)

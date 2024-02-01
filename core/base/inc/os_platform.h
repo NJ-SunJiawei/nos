@@ -12,7 +12,9 @@
 #ifndef OS_COMPAT_H
 #define OS_COMPAT_H
 
-OS_BEGIN_EXTERN_C
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 #ifdef _MSC_VER
 #define __OS_FUNC__ __FUNCTION__
@@ -56,7 +58,7 @@ OS_BEGIN_EXTERN_C
 #endif
 
 #if !defined(_STDINT) && !defined(uint32_t)
-typedef unsigned __int8 uint8_t;        // u char
+typedef unsigned __int8 uint8_t;         // u char
 typedef unsigned __int16 uint16_t;    // u short int
 typedef unsigned __int32 uint32_t;    // u int(32/64) /long(32) int
 typedef unsigned __int64 uint64_t;    // u long(64) int /long long(64) int
@@ -259,8 +261,6 @@ typedef intptr_t os_ssize_t;
 #define OS_TIME_T_FMT OS_INT64_T_FMT
 #endif
 
-OS_END_EXTERN_C
-
 /////////////////////////////////////////////////////////////
 #ifndef FALSE
 #define FALSE 0
@@ -303,6 +303,18 @@ OS_END_EXTERN_C
 #define _Out_ptrdiff_cap_(x)
 #define _Out_opt_ptrdiff_cap_(x)
 #define _Post_count_(x)
+#endif
+
+#define _ENTER_API_
+#define _EXIT_API_
+#define _CONF_API_
+#define _API_
+
+#ifdef PRIVATE
+#undef PRIVATE
+#define PRIVATE   static
+#else
+#define PRIVATE   static
 #endif
 
 //////////////////////////////////////////////////////
@@ -354,6 +366,8 @@ OS_END_EXTERN_C
 #define OS_GNUC_FALLTHROUGH
 #endif
 
+#define OS_GNUC_PACKED __attribute__ ((__packed__))
+
 #if defined(_WIN32)
 #define htole16(x) (x)
 #define htole32(x) (x)
@@ -403,7 +417,7 @@ typedef struct os_uint24_s {
     uint32_t v:24;
 }  __attribute__ ((packed)) os_uint24_t;
 
-static os_inline os_uint24_t os_be24toh(os_uint24_t x)
+PRIVATE os_inline os_uint24_t os_be24toh(os_uint24_t x)
 {
     uint32_t tmp = x.v;
     tmp = be32toh(tmp);
@@ -411,7 +425,7 @@ static os_inline os_uint24_t os_be24toh(os_uint24_t x)
     return x;
 }
 
-static os_inline os_uint24_t os_htobe24(os_uint24_t x)
+PRIVATE os_inline os_uint24_t os_htobe24(os_uint24_t x)
 {
     uint32_t tmp = x.v;
     tmp = htobe32(tmp);
@@ -480,14 +494,6 @@ static os_inline os_uint24_t os_htobe24(os_uint24_t x)
     #define END          }}}
 #endif
 
-#define OS_ARG_MAX                     256
-#define OS_MAX_FILEPATH_LEN            256
-#define OS_MAX_IFNAME_LEN              32
-
-#define OS_MAX_SDU_LEN                 32768 /* Should Heap */
-#define OS_HUGE_LEN                    8192  /* Can Stack */
-#define OS_MAX_PKT_LEN                 2048
-
 #define OS_FILE_LINE __FILE__ ":" OS_STRINGIFY(__LINE__)
 
 #define os_uint64_to_uint32(x) ((x >= 0xffffffffUL) ? 0xffffffffU : x)
@@ -500,5 +506,8 @@ static os_inline os_uint24_t os_htobe24(os_uint24_t x)
     ((__oBJ)->reference_count)--
 #define OS_OBJECT_IS_REF(__oBJ) ((__oBJ)->reference_count > 1)
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif

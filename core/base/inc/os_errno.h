@@ -12,7 +12,9 @@
 #ifndef OS_ERRNO_H
 #define OS_ERRNO_H
 
-OS_BEGIN_EXTERN_C
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 #if defined(_WIN32)
 
@@ -68,6 +70,8 @@ typedef int os_err_t;
 
 char *os_strerror(os_err_t err, char *buf, size_t size);
 
-OS_END_EXTERN_C
+#ifdef __cplusplus
+}
+#endif
 
 #endif

@@ -9,8 +9,8 @@
 #define OS_INIT_H
 
 #ifdef __cplusplus
-#define OS_BEGIN_EXTERN_C       extern "C" {
-#define OS_END_EXTERN_C         }
+#define OS_BEGIN_EXTERN_C     extern "C" {
+#define OS_END_EXTERN_C       }
 #else
 #define OS_BEGIN_EXTERN_C
 #define OS_END_EXTERN_C
@@ -28,7 +28,9 @@
 #define OS_USE_TALLOC 0
 #include "os_platform.h"
 
+//API
 #include "os_types.h"
+
 #include "os_spool.h"
 #include "os_abort.h"
 #include "os_list.h"
@@ -51,10 +53,11 @@
 #include "os_poll.h"
 #include "os_notify.h"
 
-
 #undef OS_BASE_INSIDE
 
-OS_BEGIN_EXTERN_C
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 typedef struct {
     struct {
@@ -75,10 +78,12 @@ typedef struct {
 
 } os_context_t;
 
-os_context_t *os_global_context(void);
-void os_initialize(void);
-void os_terminate(void);
+_CONF_API_ os_context_t *os_global_context(void);
+_ENTER_API_ void os_initialize(void);
+_EXIT_API_ void os_terminate(void);
 
-OS_END_EXTERN_C
+#ifdef __cplusplus
+}
+#endif
 	
 #endif

@@ -12,7 +12,9 @@
 #error "This private header cannot be included directly."
 #endif
 
-OS_BEGIN_EXTERN_C
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 typedef struct os_poll_s {
     os_lnode_t node;
@@ -38,6 +40,8 @@ typedef struct os_pollset_s {
     unsigned int capacity;
 } os_pollset_t;
 
-OS_END_EXTERN_C
+#ifdef __cplusplus
+}
+#endif
 
 #endif

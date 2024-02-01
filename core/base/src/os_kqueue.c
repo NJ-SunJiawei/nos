@@ -17,14 +17,14 @@
 #include "os_init.h"
 #include "private/os_poll_priv.h"
 
-static void kqueue_init(os_pollset_t *pollset);
-static void kqueue_cleanup(os_pollset_t *pollset);
-static int kqueue_add(os_poll_t *poll);
-static int kqueue_remove(os_poll_t *poll);
-static int kqueue_process(os_pollset_t *pollset, os_time_t timeout);
+PRIVATE void kqueue_init(os_pollset_t *pollset);
+PRIVATE void kqueue_cleanup(os_pollset_t *pollset);
+PRIVATE int kqueue_add(os_poll_t *poll);
+PRIVATE int kqueue_remove(os_poll_t *poll);
+PRIVATE int kqueue_process(os_pollset_t *pollset, os_time_t timeout);
 
-static void kqueue_notify_init(os_pollset_t *pollset);
-static int kqueue_notify_pollset(os_pollset_t *pollset);
+PRIVATE void kqueue_notify_init(os_pollset_t *pollset);
+PRIVATE int kqueue_notify_pollset(os_pollset_t *pollset);
 
 const os_pollset_actions_t os_kqueue_actions = {
     kqueue_init,
@@ -45,7 +45,7 @@ struct kqueue_context_s {
     int nchanges, nevents;
 };
 
-static void kqueue_init(os_pollset_t *pollset)
+PRIVATE void kqueue_init(os_pollset_t *pollset)
 {
     struct kqueue_context_s *context = NULL;
     os_assert(pollset);
@@ -69,7 +69,7 @@ static void kqueue_init(os_pollset_t *pollset)
     kqueue_notify_init(pollset);
 }
 
-static void kqueue_cleanup(os_pollset_t *pollset)
+PRIVATE void kqueue_cleanup(os_pollset_t *pollset)
 {
     struct kqueue_context_s *context = NULL;
 
@@ -85,7 +85,7 @@ static void kqueue_cleanup(os_pollset_t *pollset)
     os_free(context);
 }
 
-static int kqueue_set(os_poll_t *poll, int filter, int flags)
+PRIVATE int kqueue_set(os_poll_t *poll, int filter, int flags)
 {
     os_pollset_t *pollset = NULL;
     struct kqueue_context_s *context = NULL;
@@ -112,7 +112,7 @@ static int kqueue_set(os_poll_t *poll, int filter, int flags)
     return OS_OK;
 }
 
-static int kqueue_add(os_poll_t *poll)
+PRIVATE int kqueue_add(os_poll_t *poll)
 {
     int filter = 0;
 
@@ -127,7 +127,7 @@ static int kqueue_add(os_poll_t *poll)
 }
 
 #if 0 /* os_pollset_remove() is not working, SHOULD remove the below code */
-static int kqueue_remove(os_poll_t *poll)
+PRIVATE int kqueue_remove(os_poll_t *poll)
 {
     os_pollset_t *pollset = NULL;
     struct kqueue_context_s *context = NULL;
@@ -157,7 +157,7 @@ static int kqueue_remove(os_poll_t *poll)
 }
 #else /* New approach : os_pollset_remove() is properly working. */
 
-static int kqueue_remove(os_poll_t *poll)
+PRIVATE int kqueue_remove(os_poll_t *poll)
 {
     int filter = 0;
 
@@ -172,7 +172,7 @@ static int kqueue_remove(os_poll_t *poll)
 }
 #endif
 
-static int kqueue_process(os_pollset_t *pollset, os_time_t timeout)
+PRIVATE int kqueue_process(os_pollset_t *pollset, os_time_t timeout)
 {
     struct kqueue_context_s *context = NULL;
     struct timespec ts, *tp;
@@ -299,7 +299,7 @@ static int kqueue_process(os_pollset_t *pollset, os_time_t timeout)
 
 #define NOTIFY_IDENT 42 /* Magic number */
 
-static void kqueue_notify_init(os_pollset_t *pollset)
+PRIVATE void kqueue_notify_init(os_pollset_t *pollset)
 {
     int rc;
     struct kqueue_context_s *context = NULL;
@@ -320,7 +320,7 @@ static void kqueue_notify_init(os_pollset_t *pollset)
     os_assert(rc != -1);
 }
 
-static int kqueue_notify_pollset(os_pollset_t *pollset)
+PRIVATE int kqueue_notify_pollset(os_pollset_t *pollset)
 {
     int rc;
     struct kqueue_context_s *context = NULL;

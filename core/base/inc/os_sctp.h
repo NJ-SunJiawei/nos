@@ -23,7 +23,9 @@
 #endif
 
 
-OS_BEGIN_EXTERN_C
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 #undef OS_LOG_DOMAIN
 #define OS_LOG_DOMAIN __os_sctp_domain
@@ -95,6 +97,8 @@ int os_sctp_senddata(os_sock_t *sock, os_buf_t *buf, os_sockaddr_t *addr);
 void os_sctp_write_to_buffer(os_sctp_sock_t *sctp, os_buf_t *buf);
 void os_sctp_flush_and_destroy(os_sctp_sock_t *sctp);
 
-OS_END_EXTERN_C
+#ifdef __cplusplus
+}
+#endif
 
 #endif

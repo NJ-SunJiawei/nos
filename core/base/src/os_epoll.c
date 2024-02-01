@@ -16,11 +16,11 @@
 #include "os_init.h"
 #include "private/os_poll_priv.h"
 
-static void epoll_init(os_pollset_t *pollset);
-static void epoll_cleanup(os_pollset_t *pollset);
-static int epoll_add(os_poll_t *poll);
-static int epoll_remove(os_poll_t *poll);
-static int epoll_process(os_pollset_t *pollset, os_time_t timeout);
+PRIVATE void epoll_init(os_pollset_t *pollset);
+PRIVATE void epoll_cleanup(os_pollset_t *pollset);
+PRIVATE int epoll_add(os_poll_t *poll);
+PRIVATE int epoll_remove(os_poll_t *poll);
+PRIVATE int epoll_process(os_pollset_t *pollset, os_time_t timeout);
 
 const os_pollset_actions_t os_epoll_actions = {
     epoll_init,
@@ -45,7 +45,7 @@ struct epoll_context_s {
     struct epoll_event *event_list;
 };
 
-static void epoll_init(os_pollset_t *pollset)
+PRIVATE void epoll_init(os_pollset_t *pollset)
 {
     struct epoll_context_s *context = NULL;
     os_assert(pollset);
@@ -67,7 +67,7 @@ static void epoll_init(os_pollset_t *pollset)
     os_notify_init(pollset);
 }
 
-static void epoll_cleanup(os_pollset_t *pollset)
+PRIVATE void epoll_cleanup(os_pollset_t *pollset)
 {
     struct epoll_context_s *context = NULL;
 
@@ -83,7 +83,7 @@ static void epoll_cleanup(os_pollset_t *pollset)
     os_free(context);
 }
 
-static int epoll_add(os_poll_t *poll)
+PRIVATE int epoll_add(os_poll_t *poll)
 {
     int rv, op;
     os_pollset_t *pollset = NULL;
@@ -135,7 +135,7 @@ static int epoll_add(os_poll_t *poll)
     return OS_OK;
 }
 
-static int epoll_remove(os_poll_t *poll)
+PRIVATE int epoll_remove(os_poll_t *poll)
 {
     int rv, op;
     os_pollset_t *pollset = NULL;
@@ -186,7 +186,7 @@ static int epoll_remove(os_poll_t *poll)
     return OS_OK;
 }
 
-static int epoll_process(os_pollset_t *pollset, os_time_t timeout)
+PRIVATE int epoll_process(os_pollset_t *pollset, os_time_t timeout)
 {
     struct epoll_context_s *context = NULL;
     int num_of_poll;

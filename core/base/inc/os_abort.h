@@ -13,10 +13,14 @@
 #ifndef OS_ABORT_H
 #define OS_ABORT_H
 
-OS_BEGIN_EXTERN_C
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 OS_GNUC_NORETURN void os_abort(void);
 
-OS_END_EXTERN_C
+#ifdef __cplusplus
+}
+#endif
 
 #endif 

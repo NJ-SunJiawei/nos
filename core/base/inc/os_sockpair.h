@@ -12,7 +12,9 @@
 #ifndef OS_SOCKPAIR_H
 #define OS_SOCKPAIR_H
 
-OS_BEGIN_EXTERN_C
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 #ifdef _WIN32
 #define AF_SOCKPAIR     AF_INET
@@ -22,6 +24,8 @@ OS_BEGIN_EXTERN_C
 
 int os_socketpair(int family, int type, int protocol, os_socket_t fd[2]);
 
-OS_END_EXTERN_C
+#ifdef __cplusplus
+}
+#endif
 
 #endif

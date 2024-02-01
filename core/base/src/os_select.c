@@ -14,11 +14,11 @@
 #include "os_init.h"
 #include "private/os_poll_priv.h"
 
-static void select_init(os_pollset_t *pollset);
-static void select_cleanup(os_pollset_t *pollset);
-static int select_add(os_poll_t *poll);
-static int select_remove(os_poll_t *poll);
-static int select_process(os_pollset_t *pollset, os_time_t timeout);
+PRIVATE void select_init(os_pollset_t *pollset);
+PRIVATE void select_cleanup(os_pollset_t *pollset);
+PRIVATE int select_add(os_poll_t *poll);
+PRIVATE int select_remove(os_poll_t *poll);
+PRIVATE int select_process(os_pollset_t *pollset, os_time_t timeout);
 
 const os_pollset_actions_t os_select_actions = {
     select_init,
@@ -41,7 +41,7 @@ struct select_context_s {
     os_list_t list;
 };
 
-static void select_init(os_pollset_t *pollset)
+PRIVATE void select_init(os_pollset_t *pollset)
 {
     struct select_context_s *context = NULL;
     os_assert(pollset);
@@ -59,7 +59,7 @@ static void select_init(os_pollset_t *pollset)
     os_notify_init(pollset);
 }
 
-static void select_cleanup(os_pollset_t *pollset)
+PRIVATE void select_cleanup(os_pollset_t *pollset)
 {
     struct select_context_s *context = NULL;
 
@@ -71,7 +71,7 @@ static void select_cleanup(os_pollset_t *pollset)
     os_free(context);
 }
 
-static int select_add(os_poll_t *poll)
+PRIVATE int select_add(os_poll_t *poll)
 {
     os_pollset_t *pollset = NULL;
     struct select_context_s *context = NULL;
@@ -98,7 +98,7 @@ static int select_add(os_poll_t *poll)
     return OS_OK;
 }
 
-static int select_remove(os_poll_t *poll)
+PRIVATE int select_remove(os_poll_t *poll)
 {
     os_pollset_t *pollset = NULL;
     struct select_context_s *context = NULL;
@@ -124,7 +124,7 @@ static int select_remove(os_poll_t *poll)
     return OS_OK;
 }
 
-static int select_process(os_pollset_t *pollset, os_time_t timeout)
+PRIVATE int select_process(os_pollset_t *pollset, os_time_t timeout)
 {
     struct select_context_s *context = NULL;
     os_poll_t *poll = NULL, *next_poll = NULL;

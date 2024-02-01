@@ -49,7 +49,7 @@ struct os_hash_t {
 
 #define INITIAL_MAX 15 /* tunable == 2^n - 1 */
 
-static os_hash_entry_t **alloc_array(os_hash_t *ht, unsigned int max)
+PRIVATE os_hash_entry_t **alloc_array(os_hash_t *ht, unsigned int max)
 {
     os_hash_entry_t **ptr = os_calloc(1, sizeof(*ht->array) * (max + 1));
     os_assert(ptr);
@@ -174,7 +174,7 @@ void *os_hash_this_val(os_hash_index_t *hi)
     return val;
 }
 
-static void expand_array(os_hash_t *ht)
+PRIVATE void expand_array(os_hash_t *ht)
 {
     os_hash_index_t *hi;
     os_hash_entry_t **new_array;
@@ -192,7 +192,7 @@ static void expand_array(os_hash_t *ht)
     ht->max = new_max;
 }
 
-static unsigned int hashfunc_default(
+PRIVATE unsigned int hashfunc_default(
         const char *char_key, int *klen, unsigned int hash)
 {
     const unsigned char *key = (const unsigned char *)char_key;
@@ -257,7 +257,7 @@ unsigned int os_hashfunc_default(const char *char_key, int *klen)
     return hashfunc_default(char_key, klen, 0);
 }
 
-static os_hash_entry_t **find_entry(os_hash_t *ht,
+PRIVATE os_hash_entry_t **find_entry(os_hash_t *ht,
         const void *key, int klen, const void *val, const char *file_line)
 {
     os_hash_entry_t **hep, *he;

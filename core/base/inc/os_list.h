@@ -12,7 +12,9 @@
 #ifndef OS_LIST_H
 #define OS_LIST_H
 
-OS_BEGIN_EXTERN_C
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 struct os_list_s {
     struct os_list_s *prev, *next;
@@ -80,6 +82,8 @@ void __os_list_insert_sorted(os_list_t *list, void *lnode, os_list_compare_f com
 bool os_list_empty(const os_list_t *list);
 int os_list_count(const os_list_t *list);
 
-OS_END_EXTERN_C
+#ifdef __cplusplus
+}
+#endif
 
 #endif

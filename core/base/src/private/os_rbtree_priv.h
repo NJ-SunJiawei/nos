@@ -70,7 +70,9 @@
  * Every operation on a red-black tree is bounded as O(lg n).
  * The maximum height of a red-black tree is 2lg (n+1).
  */
-OS_BEGIN_EXTERN_C
+#ifdef __cplusplus
+	extern "C" {
+#endif
 
 #define SPLAY_HEAD(name, type)						\
 struct name {								\
@@ -811,6 +813,8 @@ name##_RB_MINMAX(struct name *head, int val)				\
 	    ((x) != NULL) && ((y) = name##_RB_PREV(x), (x) != NULL);	\
 	     (x) = (y))
 
-OS_END_EXTERN_C
+#ifdef __cplusplus
+	}
+#endif
 
 #endif	/* _SYS_TREE_H_ */

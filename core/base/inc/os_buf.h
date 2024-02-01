@@ -12,7 +12,9 @@
 #ifndef OS_BUF_H
 #define OS_BUF_H
 
-OS_BEGIN_EXTERN_C
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 typedef struct os_cluster_s {
     unsigned char *buffer;
@@ -90,6 +92,8 @@ void *os_buf_pull_inline(os_buf_t *buf, unsigned int len);
 void *os_buf_pull(os_buf_t *buf, unsigned int len);
 int os_buf_trim(os_buf_t *buf, int len);
 
-OS_END_EXTERN_C
+#ifdef __cplusplus
+}
+#endif
 
 #endif

@@ -7,7 +7,7 @@
 ************************************************************************/
 #include "os_init.h"
 
-static os_inline void rb_change_child(os_rbtree_t *tree,
+PRIVATE os_inline void rb_change_child(os_rbtree_t *tree,
         os_rbnode_t *old, os_rbnode_t *new, os_rbnode_t *parent)
 {
     if (parent) {
@@ -20,7 +20,7 @@ static os_inline void rb_change_child(os_rbtree_t *tree,
     }
 }
 
-static os_inline void rb_replace_node(os_rbtree_t *tree,
+PRIVATE os_inline void rb_replace_node(os_rbtree_t *tree,
         os_rbnode_t *old, os_rbnode_t *new, os_rbnode_t *parent)
 {
     rb_change_child(tree, old, new, parent);
@@ -40,7 +40,7 @@ static os_inline void rb_replace_node(os_rbtree_t *tree,
  *  / \                  / \
  * 1   2                1   2
  */
-static void rb_rotate_left(os_rbtree_t *tree, os_rbnode_t *node)
+PRIVATE void rb_rotate_left(os_rbtree_t *tree, os_rbnode_t *node)
 {
     os_rbnode_t *right = node->right;
     node->right = right->left;
@@ -64,7 +64,7 @@ static void rb_rotate_left(os_rbtree_t *tree, os_rbnode_t *node)
  *  / \                  / \
  * 1   2                1   2
  */
-static void rb_rotate_right(os_rbtree_t *tree, os_rbnode_t *node)
+PRIVATE void rb_rotate_right(os_rbtree_t *tree, os_rbnode_t *node)
 {
     os_rbnode_t *left = node->left;
     node->left = left->right;
@@ -197,7 +197,7 @@ void os_rbtree_insert_color(os_rbtree_t *tree, void *rb_node)
     tree->root->color = OS_RBTREE_BLACK;
 }
 
-static void rb_delete_color(
+PRIVATE void rb_delete_color(
     os_rbtree_t *tree, os_rbnode_t *node, os_rbnode_t *parent)
 {
     os_rbnode_t *sibling;

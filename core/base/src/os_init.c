@@ -13,7 +13,7 @@ int __os_sctp_domain;
 
 os_pollset_t* os_global_pollset;
 
-static os_context_t self = {
+PRIVATE os_context_t self = {
     .buf.pool = 8,
     .buf.config_pool = 8,
 
@@ -24,12 +24,12 @@ static os_context_t self = {
 	.pool.socket = 16,
 };
 
-os_context_t *os_global_context(void)
+_CONF_API_ os_context_t *os_global_context(void)
 {
     return &self;
 }
 
-void os_core_initialize(void)
+_ENTER_API_ void os_core_initialize(void)
 {
     os_tlog_init();
 #if OS_USE_TALLOC == 1
@@ -48,7 +48,7 @@ void os_core_initialize(void)
 
 }
 
-void os_core_terminate(void)
+_EXIT_API_ void os_core_terminate(void)
 {
     if (os_global_pollset) os_pollset_destroy(os_global_pollset);
 

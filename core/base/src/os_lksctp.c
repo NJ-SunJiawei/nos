@@ -7,7 +7,7 @@
 ************************************************************************/
 #include "os_init.h"
 
-static int subscribe_to_events(os_sock_t *sock);
+PRIVATE int subscribe_to_events(os_sock_t *sock);
 
 void os_sctp_init(uint16_t port)
 {
@@ -38,8 +38,7 @@ os_sock_t *os_sctp_socket(int family, int type)
     return new;
 }
 
-os_sock_t *os_sctp_server(
-        int type, os_sockaddr_t *sa_list, os_sockopt_t *socket_option)
+os_sock_t *os_sctp_server(int type, os_sockaddr_t *sa_list, os_sockopt_t *socket_option)
 {
     int rv;
     char buf[OS_ADDRSTRLEN];
@@ -108,8 +107,7 @@ os_sock_t *os_sctp_server(
     return new;
 }
 
-os_sock_t *os_sctp_client(
-        int type, os_sockaddr_t *sa_list, os_sockopt_t *socket_option)
+os_sock_t *os_sctp_client(int type, os_sockaddr_t *sa_list, os_sockopt_t *socket_option)
 {
     int rv;
     char buf[OS_ADDRSTRLEN];
@@ -200,8 +198,7 @@ int os_sctp_connect(os_sock_t *sock, os_sockaddr_t *sa_list)
     return OS_OK;
 }
 
-int os_sctp_sendmsg(os_sock_t *sock, const void *msg, size_t len,
-        os_sockaddr_t *to, uint32_t ppid, uint16_t stream_no)
+int os_sctp_sendmsg(os_sock_t *sock, const void *msg, size_t len, os_sockaddr_t *to, uint32_t ppid, uint16_t stream_no)
 {
     socklen_t addrlen = 0;
 
@@ -219,8 +216,7 @@ int os_sctp_sendmsg(os_sock_t *sock, const void *msg, size_t len,
             0); /* context */
 }
 
-int os_sctp_recvmsg(os_sock_t *sock, void *msg, size_t len,
-        os_sockaddr_t *from, os_sctp_info_t *sinfo, int *msg_flags)
+int os_sctp_recvmsg(os_sock_t *sock, void *msg, size_t len, os_sockaddr_t *from, os_sctp_info_t *sinfo, int *msg_flags)
 {
     int size;
     socklen_t addrlen = sizeof(struct sockaddr_storage);
@@ -259,8 +255,7 @@ int os_sctp_recvmsg(os_sock_t *sock, void *msg, size_t len,
 
 /* is any of the bytes from offset .. u8_size in 'u8' non-zero? return offset
  * or -1 if all zero */
-static int byte_nonzero(
-        const uint8_t *u8, unsigned int offset, unsigned int u8_size)
+PRIVATE int byte_nonzero(const uint8_t *u8, unsigned int offset, unsigned int u8_size)
 {
     int j;
 
@@ -272,9 +267,9 @@ static int byte_nonzero(
     return OS_ERROR;
 }
 
-static int sctp_sockopt_event_subscribe_size = 0;
+PRIVATE int sctp_sockopt_event_subscribe_size = 0;
 
-static int determine_sctp_sockopt_event_subscribe_size(void)
+PRIVATE int determine_sctp_sockopt_event_subscribe_size(void)
 {
     uint8_t buf[256];
     socklen_t buf_len = sizeof(buf);
@@ -325,7 +320,7 @@ static int determine_sctp_sockopt_event_subscribe_size(void)
  * of the structure at kernel compile time. In an ideal world, it would just
  * use the known first bytes and assume the remainder is all zero.
  * But as it doesn't do that, let's try to work around this */
-static int sctp_setsockopt_event_subscribe_workaround(
+PRIVATE int sctp_setsockopt_event_subscribe_workaround(
         int fd, const struct sctp_event_subscribe *event_subscribe)
 {
     const unsigned int compiletime_size = sizeof(*event_subscribe);
@@ -369,7 +364,7 @@ static int sctp_setsockopt_event_subscribe_workaround(
     }
 }
 
-static int subscribe_to_events(os_sock_t *sock)
+PRIVATE int subscribe_to_events(os_sock_t *sock)
 {
     struct sctp_event_subscribe event_subscribe;
 
@@ -399,9 +394,9 @@ static int subscribe_to_events(os_sock_t *sock)
     return OS_OK;
 }
 
-static int sctp_sockopt_paddrparams_size = 0;
+PRIVATE int sctp_sockopt_paddrparams_size = 0;
 
-static int determine_sctp_sockopt_paddrparams_size(void)
+PRIVATE int determine_sctp_sockopt_paddrparams_size(void)
 {
     uint8_t buf[256];
     socklen_t buf_len = sizeof(buf);
@@ -433,7 +428,7 @@ static int determine_sctp_sockopt_paddrparams_size(void)
     return 0;
 }
 
-static int sctp_setsockopt_paddrparams_workaround(
+PRIVATE int sctp_setsockopt_paddrparams_workaround(
         int fd, const struct sctp_paddrparams *paddrparams)
 {
     const unsigned int compiletime_size = sizeof(*paddrparams);

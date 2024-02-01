@@ -28,7 +28,9 @@
 #ifndef OS_SOCKADDR_H
 #define OS_SOCKADDR_H
 
-OS_BEGIN_EXTERN_C
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 typedef struct os_sockaddr_s os_sockaddr_t;
 struct os_sockaddr_s {
@@ -113,6 +115,8 @@ int os_ipsubnet(os_ipsubnet_t *ipsub,
 char *os_gethostname(os_sockaddr_t *addr);
 char *os_ipstrdup(os_sockaddr_t *addr);
 
-OS_END_EXTERN_C
+#ifdef __cplusplus
+}
+#endif
 
 #endif

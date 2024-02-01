@@ -163,9 +163,8 @@ abts_suite *run_tests1(abts_suite *suite);
 int abts_report(abts_suite *suite);
 void abts_init(int argc, const char *const argv[]);
 
-#endif
-
 #ifdef __cplusplus
 }
 #endif
 
+#endif

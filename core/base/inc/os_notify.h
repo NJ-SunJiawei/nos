@@ -12,12 +12,16 @@
 #ifndef OS_NOTIFY_H
 #define OS_NOTIFY_H
 
-OS_BEGIN_EXTERN_C
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 void os_notify_init(os_pollset_t *pollset);
 void os_notify_final(os_pollset_t *pollset);
 int os_notify_pollset(os_pollset_t *pollset);
 
-OS_END_EXTERN_C
+#ifdef __cplusplus
+}
+#endif
 
 #endif

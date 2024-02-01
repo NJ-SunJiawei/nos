@@ -14,7 +14,7 @@ extern const os_pollset_actions_t os_kqueue_actions;
 extern const os_pollset_actions_t os_epoll_actions;
 extern const os_pollset_actions_t os_select_actions;
 
-static void *self_handler_data = NULL;
+PRIVATE void *self_handler_data = NULL;
 
 os_pollset_actions_t os_pollset_actions;
 bool os_pollset_actions_initialized = false;

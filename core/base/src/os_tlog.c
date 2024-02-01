@@ -76,26 +76,26 @@ const char *level_strings[] = {
     "FATAL", "ERROR", "WARNING", "INFO", "DEBUG", "TRACE",
 };
 
-static OS_POOL(tlog_pool, os_tlog_t);
-static OS_LIST(tlog_list);
+PRIVATE OS_POOL(tlog_pool, os_tlog_t);
+PRIVATE OS_LIST(tlog_list);
 
-static OS_POOL(domain_pool, os_tlog_domain_t);
-static OS_LIST(domain_list);
+PRIVATE OS_POOL(domain_pool, os_tlog_domain_t);
+PRIVATE OS_LIST(domain_list);
 
-static os_tlog_t *add_tlog(os_tlog_type_e type);
-static int file_cycle(os_tlog_t *tlog);
+PRIVATE os_tlog_t *add_tlog(os_tlog_type_e type);
+PRIVATE int file_cycle(os_tlog_t *tlog);
 
-static char *tlog_timestamp(char *buf, char *last,
+PRIVATE char *tlog_timestamp(char *buf, char *last,
         int use_color);
-static char *tlog_domain(char *buf, char *last,
+PRIVATE char *tlog_domain(char *buf, char *last,
         const char *name, int use_color);
-static char *tlog_content(char *buf, char *last,
+PRIVATE char *tlog_content(char *buf, char *last,
         const char *format, va_list ap);
-static char *tlog_level(char *buf, char *last,
+PRIVATE char *tlog_level(char *buf, char *last,
         os_tlog_level_e level, int use_color);
-static char *tlog_linefeed(char *buf, char *last);
+PRIVATE char *tlog_linefeed(char *buf, char *last);
 
-static void file_writer(
+PRIVATE void file_writer(
         os_tlog_t *tlog, os_tlog_level_e level, const char *string);
 
 void os_tlog_init(void)
@@ -121,19 +121,6 @@ void os_tlog_final(void)
     os_pool_final(&domain_pool);
 }
 
-void os_tlog_cycle(void)
-{
-    os_tlog_t *tlog = NULL;
-
-    os_list_for_each(&tlog_list, tlog) {
-        switch(tlog->type) {
-        case OS_LOG_FILE_TYPE:
-            file_cycle(tlog);
-        default:
-            break;
-        }
-    }
-}
 
 os_tlog_t *os_tlog_add_stderr(void)
 {
@@ -327,7 +314,7 @@ void os_tlog_set_mask_level(const char *_mask, os_tlog_level_e level)
     }
 }
 
-static os_tlog_level_e os_tlog_level_from_string(const char *string)
+PRIVATE os_tlog_level_e os_tlog_level_from_string(const char *string)
 {
     os_tlog_level_e level = OS_ERROR;
 
@@ -490,7 +477,7 @@ void os_tlog_hexdump_func(os_tlog_level_e level, int id,
     os_tlog_print(level, "%s", dumpstr);
 }
 
-static os_tlog_t *add_tlog(os_tlog_type_e type)
+PRIVATE os_tlog_t *add_tlog(os_tlog_type_e type)
 {
     os_tlog_t *tlog = NULL;
 
@@ -511,7 +498,7 @@ static os_tlog_t *add_tlog(os_tlog_type_e type)
     return tlog;
 }
 
-static int file_cycle(os_tlog_t *tlog)
+PRIVATE int file_cycle(os_tlog_t *tlog)
 {
     os_assert(tlog);
     os_assert(tlog->file.out);
@@ -524,7 +511,7 @@ static int file_cycle(os_tlog_t *tlog)
     return 0;
 }
 
-static char *tlog_timestamp(char *buf, char *last,
+PRIVATE char *tlog_timestamp(char *buf, char *last,
         int use_color)
 {
     struct timeval tv;
@@ -543,7 +530,7 @@ static char *tlog_timestamp(char *buf, char *last,
     return buf;
 }
 
-static char *tlog_domain(char *buf, char *last,
+PRIVATE char *tlog_domain(char *buf, char *last,
         const char *name, int use_color)
 {
     buf = os_slprintf(buf, last, "[%s%s%s] ",
@@ -554,7 +541,7 @@ static char *tlog_domain(char *buf, char *last,
     return buf;
 }
 
-static char *tlog_level(char *buf, char *last,
+PRIVATE char *tlog_level(char *buf, char *last,
         os_tlog_level_e level, int use_color)
 {
     const char *colors[] = {
@@ -586,7 +573,7 @@ static char *tlog_content(char *buf, char *last,
     return buf;
 }
 
-static char *tlog_linefeed(char *buf, char *last)
+PRIVATE char *tlog_linefeed(char *buf, char *last)
 {
 #if defined(_WIN32)
     if (buf > last - 3)
@@ -603,7 +590,7 @@ static char *tlog_linefeed(char *buf, char *last)
     return buf;
 }
 
-static void file_writer(
+PRIVATE void file_writer(
         os_tlog_t *tlog, os_tlog_level_e level, const char *string)
 {
     fprintf(tlog->file.out, "%s", string);

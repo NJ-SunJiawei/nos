@@ -12,7 +12,9 @@
 #ifndef OS_POOL_H
 #define OS_POOL_H
 
-OS_BEGIN_EXTERN_C
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 typedef unsigned int os_index_t;
 
@@ -128,6 +130,8 @@ typedef unsigned int os_index_t;
     free((pool)->index); \
 } while (0)
 
-OS_END_EXTERN_C
+#ifdef __cplusplus
+	}
+#endif
 
 #endif

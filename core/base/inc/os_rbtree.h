@@ -12,7 +12,9 @@
 #ifndef OS_RBTREE_H
 #define OS_RBTREE_H
 
-OS_BEGIN_EXTERN_C
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 typedef enum {
     OS_RBTREE_BLACK = 0,
@@ -58,6 +60,8 @@ void *os_rbtree_prev(const void *node);
 bool os_rbtree_empty(const os_rbtree_t *tree);
 int os_rbtree_count(const os_rbtree_t *tree);
 
-OS_END_EXTERN_C
+#ifdef __cplusplus
+}
+#endif
 
 #endif

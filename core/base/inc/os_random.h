@@ -12,11 +12,15 @@
 #ifndef OS_RAND_H
 #define OS_RAND_H
 
-OS_BEGIN_EXTERN_C
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 void os_random(void *buf, size_t buflen);
 uint32_t os_random32(void);
 
-OS_END_EXTERN_C
+#ifdef __cplusplus
+}
+#endif
 
 #endif

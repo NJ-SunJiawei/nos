@@ -12,7 +12,9 @@
 #ifndef OS_SOCKET_H
 #define OS_SOCKET_H
 
-OS_BEGIN_EXTERN_C
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 #ifdef _WIN32
 typedef SOCKET os_socket_t;
@@ -57,6 +59,8 @@ ssize_t os_recvfrom(os_socket_t fd,
 
 int os_closesocket(os_socket_t fd);
 
-OS_END_EXTERN_C
+#ifdef __cplusplus
+}
+#endif
 
 #endif

@@ -12,7 +12,9 @@
 #ifndef OS_POLL_H
 #define OS_POLL_H
 
-OS_BEGIN_EXTERN_C
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 typedef void (*os_poll_handler_f)(short when, os_socket_t fd, void *data);
 
@@ -44,6 +46,8 @@ extern os_pollset_actions_t os_pollset_actions;
 #define os_pollset_poll os_pollset_actions.poll
 #define os_pollset_notify os_pollset_actions.notify
 
-OS_END_EXTERN_C
+#ifdef __cplusplus
+}
+#endif
 
 #endif

@@ -45,8 +45,8 @@ OS_STATIC_ASSERT(sizeof(os_cluster_lil_t) % sizeof(void *) == 0);
 OS_STATIC_ASSERT(sizeof(os_cluster_mid_t) % sizeof(void *) == 0);
 OS_STATIC_ASSERT(sizeof(os_cluster_big_t) % sizeof(void *) == 0);
 
-static OS_POOL(buf_pool, os_buf_pool_t);
-static os_buf_pool_t *default_pool = NULL;
+PRIVATE OS_POOL(buf_pool, os_buf_pool_t);
+PRIVATE os_buf_pool_t *default_pool = NULL;
 
 typedef struct os_buf_pool_s {
     OS_POOL(buf, os_buf_t);
@@ -66,8 +66,8 @@ typedef struct os_buf_pool_s {
     os_thread_mutex_t mutex;
 } os_buf_pool_t;
 
-static os_cluster_t *cluster_alloc(os_buf_pool_t *pool, unsigned int size);
-static void cluster_free(os_buf_pool_t *pool, os_cluster_t *cluster);
+PRIVATE os_cluster_t *cluster_alloc(os_buf_pool_t *pool, unsigned int size);
+PRIVATE void cluster_free(os_buf_pool_t *pool, os_cluster_t *cluster);
 #endif
 
 void *os_buf_put_data(
@@ -363,7 +363,7 @@ os_buf_t *os_buf_copy_debug(os_buf_t *buf, const char *file_line)
 }
 
 #if OS_USE_TALLOC == 0
-static os_cluster_t *cluster_alloc(
+PRIVATE os_cluster_t *cluster_alloc(
         os_buf_pool_t *pool, unsigned int size)
 {
     os_cluster_t *cluster = NULL;
@@ -453,7 +453,7 @@ static os_cluster_t *cluster_alloc(
     return cluster;
 }
 
-static void cluster_free(os_buf_pool_t *pool, os_cluster_t *cluster)
+PRIVATE void cluster_free(os_buf_pool_t *pool, os_cluster_t *cluster)
 {
     os_assert(pool);
     os_assert(cluster);

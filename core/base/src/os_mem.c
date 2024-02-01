@@ -16,7 +16,7 @@
 #if OS_USE_TALLOC == 1
 
 void *__os_talloc_core;
-static os_thread_mutex_t mutex;
+PRIVATE os_thread_mutex_t mutex;
 #define TALLOC_MEMSIZE 1
 
 void os_kmem_init(void)

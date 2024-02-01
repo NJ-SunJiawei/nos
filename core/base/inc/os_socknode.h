@@ -12,7 +12,9 @@
 #ifndef OS_SOCKNODE_H
 #define OS_SOCKNODE_H
 
-OS_BEGIN_EXTERN_C
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 typedef struct os_socknode_s {
     os_lnode_t node;
@@ -46,6 +48,8 @@ void os_socknode_set_cleanup(
 
 os_sock_t *os_socknode_sock_first(os_list_t *list);
 
-OS_END_EXTERN_C
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* OS_SOCKNODE_H */

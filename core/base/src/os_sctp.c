@@ -7,7 +7,7 @@
 ************************************************************************/
 #include "os_init.h"
 
-static void sctp_write_callback(short when, os_socket_t fd, void *data);
+PRIVATE void sctp_write_callback(short when, os_socket_t fd, void *data);
 
 int os_sctp_recvdata(os_sock_t *sock, void *msg, size_t len,
         os_sockaddr_t *from, os_sctp_info_t *sinfo)
@@ -127,7 +127,7 @@ void os_sctp_write_to_buffer(os_sctp_sock_t *sctp, os_buf_t *buf)
     }
 }
 
-static void sctp_write_callback(short when, os_socket_t fd, void *data)
+PRIVATE void sctp_write_callback(short when, os_socket_t fd, void *data)
 {
     os_sctp_sock_t *sctp = data;
     os_buf_t *buf = NULL;

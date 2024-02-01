@@ -44,7 +44,9 @@
 #ifndef OS_TIME_H
 #define OS_TIME_H
 
-OS_BEGIN_EXTERN_C
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /** number of microseconds in the interval */
 typedef int64_t os_interval_time_t;
@@ -99,6 +101,8 @@ void os_usleep(time_t usec);
 #define os_strptime strptime
 #define os_strftime strftime
 
-OS_END_EXTERN_C
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* OS_TIME_H */

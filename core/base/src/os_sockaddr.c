@@ -439,7 +439,7 @@ bool os_sockaddr_is_equal(const void *p, const void *q)
     }
 }
 
-static int parse_network(os_ipsubnet_t *ipsub, const char *network)
+PRIVATE int parse_network(os_ipsubnet_t *ipsub, const char *network)
 {
     /* legacy syntax for ip addrs: a.b.c. ==> a.b.c.0/24 for example */
     int shift;
@@ -495,7 +495,7 @@ static int parse_network(os_ipsubnet_t *ipsub, const char *network)
  * CORE_BADIP      IP address portion is is not valid
  * CORE_BADMASK    mask portion is not valid
  */
-static int parse_ip(
+PRIVATE int parse_ip(
         os_ipsubnet_t *ipsub, const char *ipstr, int network_allowed)
 {
     /* supported flavors of IP:
@@ -541,7 +541,7 @@ static int parse_ip(
     return OS_OK;
 }
 
-static int looks_like_ip(const char *ipstr)
+PRIVATE int looks_like_ip(const char *ipstr)
 {
     if (strlen(ipstr) == 0)
         return 0;
@@ -559,7 +559,7 @@ static int looks_like_ip(const char *ipstr)
     return (*ipstr == '\0');
 }
 
-static void fix_subnet(os_ipsubnet_t *ipsub)
+PRIVATE void fix_subnet(os_ipsubnet_t *ipsub)
 {
     /* in case caller specified more bits in network address than are
      * valid according to the mask, turn off the extra bits

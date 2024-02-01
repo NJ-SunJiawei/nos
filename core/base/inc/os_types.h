@@ -12,12 +12,21 @@
 #ifndef OS_TYPES_H
 #define OS_TYPES_H
 
-OS_BEGIN_EXTERN_C
+#ifdef __cplusplus
+extern "C" {
+#endif
 
-extern int __os_mem_domain;
-extern int __os_sock_domain;
-extern int __os_sctp_domain;
+/***************DEFINE*******************/
+/***************common*******************/
+#define OS_ARG_MAX                     256
+#define OS_MAX_FILEPATH_LEN            256
+#define OS_MAX_IFNAME_LEN              32
 
+#define OS_MAX_SDU_LEN                 32768 /* Should Heap */
+#define OS_HUGE_LEN                    8192  /* Can Stack */
+#define OS_MAX_PKT_LEN                 2048
+
+/***************log**********************/
 #define OS_LOG_MESSAGE   os_tlog_message
 #define OS_LOG_PRINT     os_tlog_print
 #define OS_LOG_HEXDUMP   os_tlog_hexdump
@@ -28,16 +37,24 @@ extern int __os_sctp_domain;
 #define OS_INFO  os_info
 #define OS_DEBUG os_debug
 #define OS_TRACE os_trace
+/****************************************/
+/***************declaration**************/
 
-
- /** number of microseconds since 00:00:00 january 1, 1970 UTC */
+//number of microseconds since 00:00:00 january 1, 1970 UTC
 typedef int64_t os_time_t;
-
 typedef struct os_pollset_s os_pollset_t;
 typedef struct os_poll_s os_poll_t;
 
-extern os_pollset_t* os_global_pollset;
+/****************************************/
+/***************global*******************/
+extern int __os_mem_domain;
+extern int __os_sock_domain;
+extern int __os_sctp_domain;
 
-OS_END_EXTERN_C
+_API_ extern os_pollset_t* os_global_pollset;
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

@@ -12,7 +12,9 @@
 #ifndef OS_TLOG_H
 #define OS_TLOG_H
 
-OS_BEGIN_EXTERN_C
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 #ifndef OS_LOG_DOMAIN
 #define OS_LOG_DOMAIN      1
@@ -55,7 +57,6 @@ typedef struct os_tlog_domain_s os_tlog_domain_t;
 
 void os_tlog_init(void);
 void os_tlog_final(void);
-void os_tlog_cycle(void);
 
 os_tlog_t *os_tlog_add_stderr(void);
 os_tlog_t *os_tlog_add_file(const char *name);
@@ -71,8 +72,7 @@ os_tlog_level_e os_tlog_get_domain_level(int id);
 const char *os_tlog_get_domain_name(int id);
 int os_tlog_get_domain_id(const char *name);
 
-void os_tlog_install_domain(int *domain_id,
-        const char *name, os_tlog_level_e level);
+void os_tlog_install_domain(int *domain_id, const char *name, os_tlog_level_e level);
 int os_tlog_config_domain(const char *domain, const char *level);
 
 void os_tlog_set_mask_level(const char *mask, os_tlog_level_e level);
@@ -85,8 +85,7 @@ void os_tlog_printf(os_tlog_level_e level, int domain_id,
     int content_only, const char *format, ...)
     OS_GNUC_PRINTF(8, 9);
 
-void os_tlog_hexdump_func(os_tlog_level_e level, int domain_id,
-    const unsigned char *data, size_t len);
+void os_tlog_hexdump_func(os_tlog_level_e level, int domain_id, const unsigned char *data, size_t len);
 
 #define os_assert(expr) \
     do { \
@@ -129,6 +128,8 @@ void os_tlog_hexdump_func(os_tlog_level_e level, int domain_id,
         } \
     } while (0)
 
-OS_END_EXTERN_C
+#ifdef __cplusplus
+		}
+#endif
 
 #endif

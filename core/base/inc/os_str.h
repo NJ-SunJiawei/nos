@@ -38,7 +38,9 @@
 #ifndef OS_STRINGS_H
 #define OS_STRINGS_H
 
-OS_BEGIN_EXTERN_C
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 #if defined(_WIN32)
 #define os_strtok_r strtok_s
@@ -127,6 +129,8 @@ char *os_left_trimcharacter(char *str, char to_remove);
 char *os_right_trimcharacter(char *str, char to_remove);
 char *os_trimcharacter(char *str, char to_remove);
 
-OS_END_EXTERN_C
+#ifdef __cplusplus
+}
+#endif
 
 #endif

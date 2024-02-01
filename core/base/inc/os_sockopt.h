@@ -12,7 +12,9 @@
 #ifndef OS_SOCKOPT_H
 #define OS_SOCKOPT_H
 
-OS_BEGIN_EXTERN_C
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 typedef struct os_sockopt_s {
     struct {
@@ -48,6 +50,8 @@ int os_tcp_nodelay(os_socket_t fd, int on);
 int os_so_linger(os_socket_t fd, int l_linger);
 int os_bind_to_device(os_socket_t fd, const char *device);
 
-OS_END_EXTERN_C
+#ifdef __cplusplus
+}
+#endif
 
 #endif

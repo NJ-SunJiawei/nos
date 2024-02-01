@@ -12,7 +12,9 @@
 #ifndef OS_THREAD_H
 #define OS_THREAD_H
 
-OS_BEGIN_EXTERN_C
+#ifdef __cplusplus
+extern "C" {
+#endif
 /*
  * The following code is stolen from mongodb-c-driver
  * https://github.com/mongodb/mongo-c-driver/blob/master/src/libmongoc/src/mongoc/mongoc-thread-private.h
@@ -27,7 +29,7 @@ OS_BEGIN_EXTERN_C
 #define os_thread_cond_t pthread_cond_t
 #define os_thread_cond_init(_n) (void)pthread_cond_init((_n), NULL)
 #define os_thread_cond_wait pthread_cond_wait
-__attribute__((unused)) static os_inline int os_thread_cond_timedwait(
+__attribute__((unused)) PRIVATE os_inline int os_thread_cond_timedwait(
         pthread_cond_t *cond, pthread_mutex_t *mutex, os_time_t timeout)
 {
     int r;
@@ -66,7 +68,7 @@ __attribute__((unused)) static os_inline int os_thread_cond_timedwait(
 #define os_thread_cond_init InitializeConditionVariable
 #define os_thread_cond_wait(_c, _m) \
     os_thread_cond_timedwait ((_c), (_m), INFINITE)
-static os_inline int os_thread_cond_timedwait(
+PRIVATE os_inline int os_thread_cond_timedwait(
     os_thread_cond_t *cond, os_thread_mutex_t *mutex, os_time_t timeout)
 {
     int r;
@@ -86,7 +88,7 @@ static os_inline int os_thread_cond_timedwait(
 }
 #define os_thread_cond_signal WakeConditionVariable
 #define os_thread_cond_broadcast WakeAllConditionVariable
-static os_inline int os_thread_cond_destroy(os_thread_cond_t *_ignored)
+PRIVATE os_inline int os_thread_cond_destroy(os_thread_cond_t *_ignored)
 {
    return 0;
 }
@@ -97,6 +99,8 @@ typedef struct os_thread_s os_thread_t;
 //os_thread_t *os_thread_create(void (*func)(void *), void *data);
 //void os_thread_destroy(os_thread_t *thread, int delay);
 
-OS_END_EXTERN_C
+#ifdef __cplusplus
+}
+#endif
 
 #endif

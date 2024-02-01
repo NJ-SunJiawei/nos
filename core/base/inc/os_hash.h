@@ -28,7 +28,9 @@
 #ifndef OS_HASH_H
 #define OS_HASH_H
 
-OS_BEGIN_EXTERN_C
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 #define OS_HASH_KEY_STRING     (-1)
 
@@ -64,6 +66,8 @@ typedef int (os_hash_do_callback_fn_t)(void *rec, const void *key, int klen, con
 
 int os_hash_do(os_hash_do_callback_fn_t *comp, void *rec, const os_hash_t *ht);
 
-OS_END_EXTERN_C
+#ifdef __cplusplus
+}
+#endif
 
 #endif

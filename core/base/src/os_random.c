@@ -109,7 +109,7 @@ uint32_t os_random32(void)
  */
 void *(*volatile evutil_memset_volatile_)(void *, int, size_t) = memset;
 
-static void evutil_memclear_(void *mem, size_t len)
+PRIVATE void evutil_memclear_(void *mem, size_t len)
 {
 	evutil_memset_volatile_(mem, 0, len);
 }

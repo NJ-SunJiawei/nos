@@ -12,7 +12,9 @@
 #ifndef OS_MEM_H
 #define OS_MEM_H
 
-OS_BEGIN_EXTERN_C
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 #define OS_MEM_CLEAR(__dATA) \
     do { \
@@ -63,6 +65,8 @@ int os_free_debug(void *ptr);
 
 #endif
 
-OS_END_EXTERN_C
+#ifdef __cplusplus
+}
+#endif
 
 #endif
