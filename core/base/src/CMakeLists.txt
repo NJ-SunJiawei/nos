@@ -1,0 +1,350 @@
+﻿cmake_minimum_required(VERSION 3.00)
+
+set(SRC_FILES
+    cJSON.c
+    cJSON_Utils.c
+    sqlite3.c
+    os_abort.c
+    os_errno.c
+    os_str.c
+    os_time.c
+    os_tlog.c
+    os_list.c
+    os_hash.c
+    os_buf.c
+    os_mem.c
+    os_rbtree.c
+    os_random.c
+    os_sockopt.c
+    os_sockaddr.c
+    os_socket.c
+    os_sockpair.c
+    os_socknode.c
+    os_sctp.c
+    os_lksctp.c
+    #os_kqueue.c
+    os_epoll.c
+    os_select.c
+    os_poll.c
+    os_notify.c
+    os_init.c
+)
+
+#######################os base config##############################		
+INCLUDE (TestBigEndian)
+#set(_GNU_SOURCE 1) //C文件中重复定义
+set(OS_BIG_ENDIAN 4321)
+set(OS_LITTLE_ENDIAN 1234)
+TEST_BIG_ENDIAN (HOST_BIG_ENDIAN)
+IF(HOST_BIG_ENDIAN)
+    set(OS_BYTE_ORDER OS_BIG_ENDIAN)
+ENDIF(HOST_BIG_ENDIAN)
+
+IF(NOT HOST_BIG_ENDIAN)
+    set(OS_BYTE_ORDER OS_LITTLE_ENDIAN)
+ENDIF(NOT HOST_BIG_ENDIAN)
+
+INCLUDE (CheckLibraryExists)
+INCLUDE (CheckFunctionExists)
+INCLUDE (CheckIncludeFiles)
+INCLUDE (CheckSymbolExists)
+INCLUDE (CheckCSourceCompiles)
+
+CHECK_INCLUDE_FILES(arpa/inet.h HAVE_ARPA_INET_H)
+CHECK_INCLUDE_FILES(ctype.h HAVE_CTYPE_H)
+CHECK_INCLUDE_FILES(errno.h HAVE_ERRNO_H)
+CHECK_INCLUDE_FILES(execinfo.h HAVE_EXECINFO_H)
+CHECK_INCLUDE_FILES(fcntl.h HAVE_FCNTL_H)
+CHECK_INCLUDE_FILES(ifaddrs.h HAVE_IFADDRS_H)
+CHECK_INCLUDE_FILES(netdb.h HAVE_NETDB_H)
+CHECK_INCLUDE_FILES(pthread.h HAVE_PTHREAD_H)
+CHECK_INCLUDE_FILES(signal.h HAVE_SIGNAL_H)
+CHECK_INCLUDE_FILES(stdarg.h HAVE_STDARG_H)
+CHECK_INCLUDE_FILES(stddef.h HAVE_STDDEF_H)
+CHECK_INCLUDE_FILES(stdio.h HAVE_STDIO_H)
+CHECK_INCLUDE_FILES(stdint.h HAVE_STDINT_H)
+CHECK_INCLUDE_FILES(stdbool.h HAVE_STDBOOL_H)
+CHECK_INCLUDE_FILES(stdlib.h HAVE_STDLIB_H)
+CHECK_INCLUDE_FILES(string.h HAVE_STRING_H)
+CHECK_INCLUDE_FILES(strings.h HAVE_STRINGS_H)
+CHECK_INCLUDE_FILES(time.h HAVE_TIME_H)
+CHECK_INCLUDE_FILES(unistd.h HAVE_UNISTD_H)
+CHECK_INCLUDE_FILES(net/if.h HAVE_NET_IF_H)
+CHECK_INCLUDE_FILES(netinet/in.h HAVE_NETINET_IN_H)
+CHECK_INCLUDE_FILES(netinet/in_systm.h HAVE_NETINET_IN_SYSTM_H)
+CHECK_INCLUDE_FILES(netinet/udp.h HAVE_NETINET_TCP_H)
+CHECK_INCLUDE_FILES(netinet/tcp.h HAVE_NETINET_UDP_H)
+CHECK_INCLUDE_FILES(netinet/sctp.h HAVE_NETINET_SCTP_H)
+IF(NOT HAVE_NETINET_SCTP_H)
+include(${OS_ROOT_PATH}/cmake/Modules/lksctp.cmake)
+ENDIF(NOT HAVE_NETINET_SCTP_H)
+CHECK_INCLUDE_FILES(sys/ioctl.h HAVE_SYS_IOCTL_H)
+CHECK_INCLUDE_FILES(sys/param.h HAVE_SYS_PARAM_H)
+CHECK_INCLUDE_FILES(sys/random.h HAVE_SYS_RANDOM_H)
+CHECK_INCLUDE_FILES(sys/socket.h HAVE_SYS_SOCKET_H)
+CHECK_INCLUDE_FILES(sys/stat.h HAVE_SYS_STAT_H)
+CHECK_INCLUDE_FILES(limits.h HAVE_LIMITS_H)
+CHECK_INCLUDE_FILES(sys/syslimits.h HAVE_SYS_SYSLIMITS_H)
+CHECK_INCLUDE_FILES(sys/types.h HAVE_SYS_TYPES_H)
+CHECK_INCLUDE_FILES(sys/wait.h HAVE_SYS_UIO_H)
+CHECK_INCLUDE_FILES(sys/uio.h HAVE_SYS_WAIT_H)
+CHECK_INCLUDE_FILES(sys/time.h HAVE_SYS_TIME_H)
+
+CHECK_FUNCTION_EXISTS(arc4random HAVE_ARC4RANDOM)
+CHECK_FUNCTION_EXISTS(arc4random_buf HAVE_ARC4RANDOM_BUF)
+CHECK_FUNCTION_EXISTS(getrandom HAVE_GETRANDOM)
+CHECK_FUNCTION_EXISTS(localtime_r HAVE_LOCALTIME_R)
+CHECK_FUNCTION_EXISTS(getifaddrs HAVE_GETIFADDRS)
+CHECK_FUNCTION_EXISTS(getenv HAVE_GETENV)
+CHECK_FUNCTION_EXISTS(putenv HAVE_PUTENV)
+CHECK_FUNCTION_EXISTS(setenv HAVE_SETENV)
+CHECK_FUNCTION_EXISTS(unsetenv HAVE_UNSETENV)
+CHECK_FUNCTION_EXISTS(strerror_r HAVE_STRERROR_R)
+CHECK_FUNCTION_EXISTS(sigaction HAVE_SIGACTION)
+CHECK_FUNCTION_EXISTS(sigwait HAVE_SIGWAIT)
+CHECK_FUNCTION_EXISTS(sigsuspend HAVE_SIGSUSPEND)
+CHECK_FUNCTION_EXISTS(eventfd HAVE_EVENTFD)
+CHECK_FUNCTION_EXISTS(kqueue HAVE_KQUEUE)
+CHECK_FUNCTION_EXISTS(epoll_ctl HAVE_EPOLL_CTL)
+CHECK_FUNCTION_EXISTS(select HAVE_SELECT_CTL)
+
+set(HAVE_PTHREAD_BAR 1)
+set(HAVE_DECL_SYS_SIGLIST 1)
+set(STRERROR_R_CHAR_P 0) #gnu
+
+IF(HAVE_EXECINFO_H)
+    CHECK_SYMBOL_EXISTS(backtrace execinfo.h HAVE_BACKTRACE)
+ENDIF(HAVE_EXECINFO_H)
+
+CHECK_LIBRARY_EXISTS (rt clock_gettime "" HAVE_LIBRT)
+IF (HAVE_LIBRT)
+    SET(CLOCK_GETTIME_LIBS "-lrt")
+    SET(HAVE_CLOCK_GETTIME 1)
+ELSE (HAVE_LIBRT)
+    CHECK_LIBRARY_EXISTS (posix4 clock_gettime "" HAVE_LIBPOSIX4)
+    IF (HAVE_LIBPOSIX4)
+       SET(CLOCK_GETTIME_LIBS "-lposix4")
+       SET(HAVE_CLOCK_GETTIME 1)
+    ENDIF (HAVE_LIBPOSIX4)
+ENDIF (HAVE_LIBRT)
+
+IF(HAVE_EPOLL_CTL)
+    set(HAVE_EPOLL 1)
+	set(SRC_FILES ${SRC_FILES}  os_epoll.c)
+ENDIF(HAVE_EPOLL_CTL)
+
+IF(HAVE_KQUEUE)
+	set(SRC_FILES ${SRC_FILES}  os_kqueue.c)
+ENDIF(HAVE_KQUEUE)
+
+set(OS_DEV_RANDOM /dev/urandom)
+
+###################################################
+set(DEBUG 1)
+
+set(HasJava 0)
+set(NO_MINUS_C_MINUS_O 0)
+#set(OPTIMZER 0)
+set(USE_MLOCKALL 1)
+#set(RETSIGTYPE void)
+#set(SIZEOF_CHAR 1)
+#set(SIZEOF_INT 4)
+#set(SIZEOF_LONG 8)
+#set(SIZEOF_LONG_LONG 8)
+#set(SIZEOF_SHORT 2)
+#set(SIZEOF_SIZE_T 8)
+#set(SIZEOF_SSIZE_T 8)
+#set(SIZEOF_VOIDP 8)
+#set(STDC_HEADERS 1)
+IF(HOST_BIG_ENDIAN)
+  set(SWITCH_BYTE_ORDER _BIG_ENDIAN)
+ELSE()
+  set(SWITCH_BYTE_ORDER _LITTLE_ENDIAN)
+ENDIF()
+
+CHECK_FUNCTION_EXISTS(asprintf HAVE_ASPRINTF)
+CHECK_FUNCTION_EXISTS(clock_gettime HAVE_CLOCK_GETTIME) #??
+CHECK_FUNCTION_EXISTS(clock_nanosleep HAVE_CLOCK_NANOSLEEP)
+CHECK_INCLUDE_FILES(dirent.h HAVE_DIRENT_H)
+CHECK_INCLUDE_FILES(dlfcn.h HAVE_DLFCN_H)
+CHECK_INCLUDE_FILES(execinfo.h HAVE_EXECINFO_H)
+CHECK_FUNCTION_EXISTS(gethostname HAVE_GETHOSTNAME)
+CHECK_FUNCTION_EXISTS(gettimeofday HAVE_GETTIMEOFDAY)
+CHECK_FUNCTION_EXISTS(initgroups HAVE_INITGROUPS)
+CHECK_INCLUDE_FILES(inttypes.h HAVE_INTTYPES_H)
+CHECK_LIBRARY_EXISTS (curl curl_easy_init "" HAVE_LIBCURL)
+set(LIBCURL_FEATURE_ASYNCHDNS 1)
+set(LIBCURL_FEATURE_IDN 1)
+set(LIBCURL_FEATURE_IPV6 1)
+set(LIBCURL_FEATURE_KRB4 0)
+set(LIBCURL_FEATURE_LIBZ 1)
+set(LIBCURL_FEATURE_NTLM 1)
+set(LIBCURL_FEATURE_SSL 1)
+set(LIBCURL_FEATURE_SSPI 0)
+set(LIBCURL_PROTOCOL_DICT 1)
+set(LIBCURL_PROTOCOL_FILE 1)
+set(LIBCURL_PROTOCOL_FTP 1)
+set(LIBCURL_PROTOCOL_FTPS 1)
+set(LIBCURL_PROTOCOL_HTTP 1)
+set(LIBCURL_PROTOCOL_HTTPS 1)
+set(LIBCURL_PROTOCOL_LDAP 0)
+set(LIBCURL_PROTOCOL_TELNET 0)
+set(LIBCURL_PROTOCOL_TFTP 0)
+set(LIBCURL_PROTOCOL_TELNET 0)
+CHECK_LIBRARY_EXISTS (curses initscr "" HAVE_LIBCURSES)
+CHECK_LIBRARY_EXISTS (ncurses initscr "" HAVE_LIBNCURSES)
+CHECK_LIBRARY_EXISTS (socket creat_inet_stream_socket "" HAVE_LIBSOCKET)
+CHECK_FUNCTION_EXISTS(localtime_r HAVE_LOCALTIME_R)
+CHECK_FUNCTION_EXISTS(malloc HAVE_MALLOC)
+CHECK_INCLUDE_FILES(memory.h HAVE_MEMORY_H)
+CHECK_FUNCTION_EXISTS(mlock HAVE_MLOCK)
+CHECK_FUNCTION_EXISTS(mlockall HAVE_MLOCKALL)
+CHECK_FUNCTION_EXISTS(mmap HAVE_MMAP)
+CHECK_INCLUDE_FILES(ndir.h HAVE_NDIR_H)
+CHECK_INCLUDE_FILES(netdb.h HAVE_NETDB_H)
+CHECK_LIBRARY_EXISTS (odbc SQLConnect "" HAVE_ODBC)
+CHECK_FUNCTION_EXISTS(pselect HAVE_PSELECT)
+CHECK_FUNCTION_EXISTS(setrlimit HAVE_RLIMIT_MEMLOCK)
+CHECK_INCLUDE_FILES(sched.h HAVE_SCHED_H)
+CHECK_FUNCTION_EXISTS(sched_setscheduler HAVE_SCHED_RR)
+CHECK_FUNCTION_EXISTS(sched_setscheduler HAVE_SCHED_SETSCHEDULER)#???
+set(USE_SCHED_SETSCHEDULER 1)
+CHECK_FUNCTION_EXISTS(setenv HAVE_SETENV)
+CHECK_FUNCTION_EXISTS(setgroups HAVE_SETGROUPS)
+CHECK_FUNCTION_EXISTS(setpriority HAVE_SETPRIORITY)
+CHECK_FUNCTION_EXISTS(setrlimit HAVE_SETRLIMIT)
+CHECK_INCLUDE_FILES(stdint.h HAVE_STDINT_H)
+CHECK_INCLUDE_FILES(stdlib.h HAVE_STDLIB_H)
+CHECK_FUNCTION_EXISTS(strcasecmp HAVE_STRCASECMP)
+CHECK_FUNCTION_EXISTS(strftime HAVE_STRFTIME)
+CHECK_FUNCTION_EXISTS(stricmp HAVE_STRICMP)
+CHECK_INCLUDE_FILES(strings.h HAVE_STRINGS_H)
+CHECK_INCLUDE_FILES(string.h HAVE_STRING_H)
+CHECK_INCLUDE_FILES(sys/dir.h HAVE_SYS_DIR_H)
+CHECK_INCLUDE_FILES(sys/filio.h HAVE_SYS_FILIO_H)
+CHECK_INCLUDE_FILES(sys/ioctl.h HAVE_SYS_IOCTL_H)
+CHECK_INCLUDE_FILES(sys/ndir.h HAVE_SYS_NDIR_H)
+CHECK_INCLUDE_FILES(sys/resource.h HAVE_SYS_RESOURCE_H)
+CHECK_INCLUDE_FILES(sys/stat.h HAVE_SYS_STAT_H)
+CHECK_INCLUDE_FILES(sys/types.h HAVE_SYS_TYPES_H)
+if(NOT HAVE_SYS_TYPES_H)
+  set(m_size_t  unsigned int)
+  set(m_ssize_t int)
+endif()
+CHECK_INCLUDE_FILES(sys/mman.h HAVE_SYS_MMAN_H)
+CHECK_INCLUDE_FILES(unistd.h HAVE_UNISTD_H)
+CHECK_FUNCTION_EXISTS(usleep HAVE_USLEEP)
+CHECK_FUNCTION_EXISTS(vasprintf HAVE_VASPRINTF)
+CHECK_INCLUDE_FILES(wchar.h HAVE_WCHAR_H)
+CHECK_FUNCTION_EXISTS(wcsncmp HAVE_WCSNCMP)
+CHECK_FUNCTION_EXISTS(_stricmp HAVE__STRICMP)
+CHECK_INCLUDE_FILES(sys/time.h TIME_WITH_SYS_TIME_1)
+CHECK_INCLUDE_FILES(time.h TIME_WITH_SYS_TIME_2)
+if(TIME_WITH_SYS_TIME_1 AND TIME_WITH_SYS_TIME_2)
+  set(TIME_WITH_SYS_TIME 1)
+  set(TM_IN_SYS_TIME 1)
+endif()
+set(USE_SETRLIMIT 1)
+#CHECK_FUNCTION_EXISTS(el_wset HAVE_LIBEDIT)
+CHECK_INCLUDE_FILES(histedit.h HAVE_LIBEDIT)
+
+configure_file(system_config.h.in  ${OS_CORE_BSAE_PATH}/inc/system_config.h)
+#############################################################
+#编译和安装OS库
+#############################################################	
+IF(PRODUCE_SO_ON)
+add_library(shared_os SHARED ${SRC_FILES})
+target_include_directories(shared_os PUBLIC ${OS_CORE_BSAE_PATH}/inc ${OS_CORE_BSAE_PATH}/src)
+target_compile_options(shared_os PUBLIC -DOS_BASE_COMPILATION)
+target_link_libraries(shared_os rt pthread m)
+if(HAVE_LIBEDIT)
+target_link_libraries(shared_os edit)
+endif()
+
+if(HAVE_LOCAL_NETINET_SCTP_H)
+target_link_libraries(shared_os ${sctp_static_lib})
+else(HAVE_LOCAL_NETINET_SCTP_H)
+target_link_libraries(shared_os sctp)
+endif(HAVE_LOCAL_NETINET_SCTP_H)
+#target_compile_options(shared_os PUBLIC -DOS_LOG2_INSTALL)
+
+if(SOLIBAPI_ON)
+set_target_properties(shared_os PROPERTIES
+                      OUTPUT_NAME "OS"
+	                  SOVERSION ${FD_PROJECT_VERSION_API}
+	                  VERSION ${FD_PROJECT_VERSION_MAJOR}.${FD_PROJECT_VERSION_MINOR}.${FD_PROJECT_VERSION_REV}
+)
+else(SOLIBAPI_ON)
+set_target_properties(shared_os PROPERTIES
+                      OUTPUT_NAME "ptos"
+)
+endif(SOLIBAPI_ON)
+
+install(TARGETS shared_os
+        LIBRARY DESTINATION ${OS_LIB_INSTALL_PATH}
+        COMPONENT os)
+ELSE(PRODUCE_SO_ON)
+#############################
+add_library(static_os STATIC ${SRC_FILES})
+target_include_directories(static_os PUBLIC ${OS_CORE_BSAE_PATH}/inc ${OS_CORE_BSAE_PATH}/src)
+target_compile_options(static_os PUBLIC -DOS_BASE_COMPILATION)
+target_link_libraries(static_os rt pthread m)
+if(HAVE_LIBEDIT)
+target_link_libraries(static_os edit)
+endif()
+
+if(HAVE_LOCAL_NETINET_SCTP_H)
+target_link_libraries(static_os ${sctp_static_lib})
+else(HAVE_LOCAL_NETINET_SCTP_H)
+target_link_libraries(static_os sctp)
+endif(HAVE_LOCAL_NETINET_SCTP_H)
+
+set_target_properties(static_os PROPERTIES
+                      OUTPUT_NAME "ptos")
+
+install(TARGETS static_os
+        ARCHIVE DESTINATION ${OS_LIB_INSTALL_PATH}
+        COMPONENT os)
+############################
+ENDIF(PRODUCE_SO_ON)
+
+install(DIRECTORY  ${OS_CORE_BSAE_PATH}/inc  DESTINATION ${OS_INC_INSTALL_PATH}/base)
+#################################################################
+if(SWIG_ON)
+cmake_policy(SET CMP0078 NEW)
+cmake_policy(SET CMP0086 NEW)
+
+set(python_module    BASE)
+set(python_cxx       BASEPYTHON_wrap.cxx)
+
+FIND_PACKAGE(SWIG REQUIRED)
+message (STATUS "swig: ${SWIG_USE_FILE}")
+include(${SWIG_USE_FILE})
+FIND_PACKAGE(Python3 COMPONENTS Interpreter Development REQUIRED)
+message (STATUS "python: ${Python3_INCLUDE_DIRS} ${Python3_LIBRARIES}")
+
+include_directories(${OS_CORE_BSAE_PATH}/inc)
+include_directories(${Python3_INCLUDE_DIRS})
+
+set(CMAKE_SWIG_OUTDIR ${CMAKE_CURRENT_BINARY_DIR})
+set(SWIG_OUTFILE_DIR ${CMAKE_CURRENT_BINARY_DIR})
+
+set_property(SOURCE BASE.i PROPERTY CPLUSPLUS ON)
+set_property(SOURCE BASE.i PROPERTY SWIG_MODULE_NAME ${python_module})   #-module xxx
+#set_source_files_properties(BASE.i PROPERTIES COMPILE_FLAGS  "-DMULTIPLICITY -threads")
+
+swig_add_library(${python_module}  LANGUAGE python SOURCES  BASE.i)
+swig_link_libraries(${python_module} libos)
+target_include_directories(${python_module} PUBLIC  ${Python3_INCLUDE_DIRS} ${OS_CORE_BSAE_PATH}/inc)
+target_link_libraries(${python_module} ${Python3_LIBRARIES})
+
+install(TARGETS ${python_module}
+        LIBRARY DESTINATION ${OS_LIB_INSTALL_PATH}/base
+        COMPONENT os)
+
+install(FILES  ${CMAKE_CURRENT_BINARY_DIR}/${python_module}.py  
+               DESTINATION ${OS_LIB_INSTALL_PATH}/base)
+
+install(FILES  ${OS_CORE_BSAE_PATH}/src/__init__.py  
+               DESTINATION ${OS_LIB_INSTALL_PATH}/base)
+endif(SWIG_ON)
