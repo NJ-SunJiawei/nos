@@ -28,7 +28,7 @@ os_socknode_t *os_socknode_new(os_sockaddr_t *addr)
 
     node = os_calloc(1, sizeof(os_socknode_t));
     if (!node) {
-        OS_ERR("os_calloc() failed");
+        os_logs(ERROR, "os_calloc() failed");
         return NULL;
     }
 
@@ -108,7 +108,7 @@ int os_socknode_probe(os_list_t *list, os_list_t *list6,
 
     rc = getifaddrs(&iflist);
     if (rc != 0) {
-        OS_LOG_MESSAGE(OS_TLOG_ERROR, os_socket_errno, "getifaddrs failed");
+         os_logp0(ERROR, ERRNOID, os_socket_errno, "getifaddrs failed");
         return OS_ERROR;
     }
 
@@ -210,8 +210,7 @@ int os_socknode_fill_scope_id_in_local(os_sockaddr_t *sa_list)
         if (iflist == NULL) {
             rc = getifaddrs(&iflist);
             if (rc != 0) {
-                OS_LOG_MESSAGE(OS_TLOG_ERROR, os_socket_errno,
-                        "getifaddrs failed");
+                 os_logp0(ERROR, ERRNOID, os_socket_errno, "getifaddrs failed");
                 return OS_ERROR;
             }
         }

@@ -22,12 +22,12 @@ OS_GNUC_NORETURN void os_abort(void)
     char **strings;
 
     nptrs = backtrace(buffer, OS_ARRAY_SIZE(buffer));
-    OS_FATAL("backtrace() returned %d addresses", nptrs);
+    os_log1(FATAL, "backtrace() returned %d addresses", nptrs);
 
     strings = backtrace_symbols(buffer, nptrs);
     if (strings) {
         for (i = 1; i < nptrs; i++)
-            OS_LOG_PRINT(OS_TLOG_FATAL, "%s\n", strings[i]);
+            os_logs(FATAL, "%s\n", strings[i]);//cdlog_print
 
         free(strings);
     }

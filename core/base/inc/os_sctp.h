@@ -94,7 +94,7 @@ int os_sctp_sendmsg(os_sock_t *sock, const void *msg, size_t len, os_sockaddr_t 
 int os_sctp_recvmsg(os_sock_t *sock, void *msg, size_t len, os_sockaddr_t *from, os_sctp_info_t *sinfo, int *msg_flags);
 int os_sctp_recvdata(os_sock_t *sock, void *msg, size_t len, os_sockaddr_t *from, os_sctp_info_t *sinfo);
 int os_sctp_senddata(os_sock_t *sock, os_buf_t *buf, os_sockaddr_t *addr);
-void os_sctp_write_to_buffer(os_sctp_sock_t *sctp, os_buf_t *buf);
+void os_sctp_write_to_buffer(os_pollset_t *pollset, os_sctp_sock_t *sctp, os_buf_t *buf);
 void os_sctp_flush_and_destroy(os_sctp_sock_t *sctp);
 
 #ifdef __cplusplus

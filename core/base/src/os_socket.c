@@ -44,7 +44,7 @@ os_sock_t *os_sock_create(void)
 
     sock = os_calloc(1, sizeof(*sock));
     if (!sock) {
-        OS_ERR("os_calloc() failed");
+        os_log0(ERROR, "os_calloc() failed");
         return NULL;
     }
 
@@ -76,12 +76,11 @@ os_sock_t *os_sock_socket(int family, int type, int protocol)
     sock->fd = socket(sock->family, type, protocol);
     if (sock->fd < 0) {
         os_sock_destroy(sock);
-        OS_LOG_MESSAGE(OS_TLOG_ERROR, os_socket_errno,
-            "socket create(%d:%d:%d) failed", sock->family, type, protocol);
+        os_logp3(ERROR, ERRNOID, os_socket_errno, "socket create(%d:%d:%d) failed", sock->family, type, protocol);
         return NULL;
     }
 
-    OS_DEBUG("socket create(%d:%d:%d)", sock->family, type, protocol);
+    os_log3(DEBUG, "socket create(%d:%d:%d)", sock->family, type, protocol);
 
     return sock;
 }
@@ -98,15 +97,15 @@ int os_sock_bind(os_sock_t *sock, os_sockaddr_t *addr)
     os_assert(addrlen);
 
     if (bind(sock->fd, &addr->sa, addrlen) != 0) {
-        OS_LOG_MESSAGE(OS_TLOG_ERROR, os_socket_errno,
-                "socket bind(%d) [%s]:%d failed",
-                addr->os_sa_family, OS_ADDR(addr, buf), OS_PORT(addr));
+		os_logs(ERROR, ">>>socket bind[%s]", OS_ADDR(addr, buf));
+        os_logp1(ERROR, ERRNOID, os_socket_errno, "socket bind[%d] failed<<<", OS_PORT(addr));
         return OS_ERROR;
     }
 
     memcpy(&sock->local_addr, addr, sizeof(sock->local_addr));
 
-    OS_DEBUG("socket bind %s:%d", OS_ADDR(addr, buf), OS_PORT(addr));
+	os_logs(DEBUG, "socket bind %s", OS_ADDR(addr, buf));
+	os_log1(DEBUG, "socket bind %d", OS_PORT(addr));
 
     return OS_OK;
 }
@@ -123,15 +122,16 @@ int os_sock_connect(os_sock_t *sock, os_sockaddr_t *addr)
     os_assert(addrlen);
 
     if (connect(sock->fd, &addr->sa, addrlen) != 0) {
-        OS_LOG_MESSAGE(OS_TLOG_ERROR, os_socket_errno,
-                "socket connect[%s]:%d failed",
-                OS_ADDR(addr, buf), OS_PORT(addr));
+		os_logs(ERROR, ">>>socket connect[%s]", OS_ADDR(addr, buf));
+        os_logp1(ERROR, ERRNOID, os_socket_errno, "socket connect[%d] failed<<<", OS_PORT(addr));
+
         return OS_ERROR;
     }
 
     memcpy(&sock->remote_addr, addr, sizeof(sock->remote_addr));
 
-    OS_DEBUG("socket connect %s:%d\n", OS_ADDR(addr, buf), OS_PORT(addr));
+	os_logs(DEBUG, "socket connect addr:%s", OS_ADDR(addr, buf));
+	os_log1(DEBUG, "socket connect port:%d", OS_PORT(addr));
 
     return OS_OK;
 }
@@ -143,7 +143,7 @@ int os_sock_listen(os_sock_t *sock)
 
     rc = listen(sock->fd, 5);
     if (rc < 0) {
-        OS_LOG_MESSAGE(OS_TLOG_ERROR, os_socket_errno, "listen failed");
+        os_logp0(ERROR, ERRNOID, os_socket_errno, "listen failed");
         return OS_ERROR;
     }
 
@@ -241,7 +241,7 @@ int os_closesocket(os_socket_t fd)
     r = close(fd);
 #endif
     if (r != 0) {
-        OS_LOG_MESSAGE(OS_TLOG_ERROR, os_socket_errno, "closesocket failed");
+         os_logp0(ERROR, ERRNOID, os_socket_errno, "closesocket failed");
         return OS_ERROR;
     }
 

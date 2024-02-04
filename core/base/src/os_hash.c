@@ -63,7 +63,7 @@ os_hash_t *os_hash_make(void)
 
     ht = os_malloc(sizeof(os_hash_t));
     if (!ht) {
-        OS_ERR("os_malloc() failed");
+        os_log0(ERROR, "os_malloc() failed");
         return NULL;
     }
 
@@ -82,7 +82,7 @@ os_hash_t *os_hash_make_custom(os_hashfunc_t hash_func)
 {
     os_hash_t *ht = os_hash_make();
     if (!ht) {
-        OS_ERR("os_hash_make() failed");
+        os_log0(ERROR, "os_hash_make() failed");
         return NULL;
     }
     ht->hash_func = hash_func;

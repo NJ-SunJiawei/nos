@@ -71,7 +71,7 @@ int os_notify_pollset(os_pollset_t *pollset)
 #endif
 
     if (r < 0) {
-        OS_LOG_MESSAGE(OS_TLOG_ERROR, os_socket_errno, "notify failed");
+       os_logp0(ERROR, ERRNOID, os_socket_errno, "notify failed");
         return OS_ERROR;
     }
 
@@ -95,6 +95,6 @@ PRIVATE void os_drain_pollset(short when, os_socket_t fd, void *data)
     r = recv(fd, (char *)buf, sizeof(buf), 0);
 #endif
     if (r < 0) {
-        OS_LOG_MESSAGE(OS_TLOG_ERROR, os_socket_errno, "drain failed");
+        os_logp0(ERROR, ERRNOID, os_socket_errno, "drain failed");
     }
 }

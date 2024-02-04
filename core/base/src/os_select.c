@@ -141,7 +141,7 @@ PRIVATE int select_process(os_pollset_t *pollset, os_time_t timeout)
                 context->max_fd = poll->fd;
             }
         }
-        OS_DEBUG("change max_fd: %d", context->max_fd);
+        os_log1(DEBUG, "change max_fd: %d", context->max_fd);
     }
 
     context->work_read_fd_set = context->master_read_fd_set;
@@ -163,7 +163,7 @@ PRIVATE int select_process(os_pollset_t *pollset, os_time_t timeout)
     rc = select(context->max_fd + 1,
             &context->work_read_fd_set, &context->work_write_fd_set, NULL, tp);
     if (rc < 0) {
-        OS_LOG_MESSAGE(OS_TLOG_ERROR, os_socket_errno, "select() failed");
+        os_logp0(ERROR, ERRNOID, os_socket_errno, "select() failed");
         return OS_ERROR;
     } else if (rc == 0) {
         return OS_TIMEUP;

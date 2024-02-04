@@ -26,6 +26,8 @@
 #define OS_BASE_INSIDE
 
 #define OS_USE_TALLOC 0
+#define OS_USE_CMLOG
+
 #include "os_platform.h"
 
 //API
@@ -43,6 +45,7 @@
 #include "os_str.h"
 #include "os_buf.h"
 #include "os_mem.h"
+#include "os_clog.h"
 #include "os_tlog.h"
 #include "os_sockaddr.h"
 #include "os_socket.h"
@@ -68,8 +71,8 @@ typedef struct {
     struct {
         int pool;
         int domain_pool;
-        os_tlog_level_e level;
-    } tlog;
+        log_level_e level;
+    } log;
 
     struct {
         uint64_t timer;

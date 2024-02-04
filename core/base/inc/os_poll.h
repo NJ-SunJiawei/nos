@@ -24,8 +24,7 @@ void os_pollset_destroy(os_pollset_t *pollset);
 #define OS_POLLIN      0x01
 #define OS_POLLOUT     0x02
 
-os_poll_t *os_pollset_add(os_pollset_t *pollset, short when,
-        os_socket_t fd, os_poll_handler_f handler, void *data);
+os_poll_t *os_pollset_add(os_pollset_t *pollset, short when, os_socket_t fd, os_poll_handler_f handler, void *data);
 void os_pollset_remove(os_poll_t *poll);
 
 void *os_pollset_self_handler_data(void);

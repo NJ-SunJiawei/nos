@@ -28,7 +28,7 @@ os_pollset_t *os_pollset_create(unsigned int capacity)
 {
     os_pollset_t *pollset = os_calloc(1, sizeof *pollset);
     if (!pollset) {
-        OS_ERR("os_calloc() failed");
+        os_log0(ERROR, "os_calloc() failed");
         return NULL;
     }
 
@@ -94,7 +94,7 @@ os_poll_t *os_pollset_add(os_pollset_t *pollset, short when,
 
     rc = os_pollset_actions.add(poll);
     if (rc != OS_OK) {
-        OS_ERR("cannot add poll");
+        os_log0(ERROR, "cannot add poll");
         os_pool_free(&pollset->pool, poll);
         return NULL;
     }
@@ -113,7 +113,7 @@ void os_pollset_remove(os_poll_t *poll)
 
     rc = os_pollset_actions.remove(poll);
     if (rc != OS_OK) {
-        OS_ERR("cannot delete poll");
+        os_log0(ERROR, "cannot delete poll");
     }
 
     os_pool_free(&pollset->pool, poll);

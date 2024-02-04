@@ -44,7 +44,7 @@ typedef unsigned int os_index_t;
 
 #define os_pool_final(pool) do { \
     if (((pool)->size != (pool)->avail)) \
-        OS_ERR("%d in '%s[%d]' were not released.", \
+        os_log2(ERROR, "%d in '%s[%d]' were not released.", \
                 (pool)->size - (pool)->avail, (pool)->name, (pool)->size); \
     free((pool)->free); \
     free((pool)->array); \
@@ -123,7 +123,7 @@ typedef unsigned int os_index_t;
 
 #define os_index_final(pool) do { \
     if (((pool)->size != (pool)->avail)) \
-        OS_ERR("%d in '%s[%d]' were not released.", \
+        os_log2(ERROR, "%d in '%s[%d]' were not released.", \
                 (pool)->size - (pool)->avail, (pool)->name, (pool)->size); \
     free((pool)->free); \
     free((pool)->array); \
