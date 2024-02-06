@@ -317,7 +317,7 @@ void loadLogDb()
   logInfo.lineno = 0;
   logInfo.modName = "CLOG";
   logInfo.logStr =  CLOG_SEGFAULT_STR; 
-  g_mLogInfo[SIGSEGV] = logInfo;
+  g_mLogInfo[OS_SIGSEGV] = logInfo;
   
 }
 

@@ -477,7 +477,7 @@ PRIVATE void cl_catch_segViolation(int sig)
 		sFileNames[i] = "unknown file";
 
 #ifndef CLOG_ENABLE_TEXT_LOGGING
-	    ctlogS(SIGSEGV, FATAL, strings[i]);
+	    ctlogS(OS_SIGSEGV, FATAL, strings[i]);
 #endif
       	printf("BT[%d] : len [%d]: %s\n",i, strlen(sFunctions[i]),strings[i]);
 		sprintf(buf+nStrLen, "   in Function %s (from %s)\n", sFunctions[i], sFileNames[i]);
@@ -488,7 +488,7 @@ PRIVATE void cl_catch_segViolation(int sig)
 	ctlogS(g_logStr[FATAL], "RLOG", "NULL", 0, FMTSTR CLOG_SEGFAULT_STR, buf);
 	fflush(g_fp);
 #else
-	ctlogS(SIGSEGV, FATAL, buf);
+	ctlogS(OS_SIGSEGV, FATAL, buf);
 #endif
 
 	cl_flush_data(SIGSEGV);
