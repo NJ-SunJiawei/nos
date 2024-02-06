@@ -26,7 +26,7 @@
 #define OS_BASE_INSIDE
 
 #define OS_USE_TALLOC 0
-#define OS_USE_CMLOG
+#define OS_USE_CTLOG
 
 #include "os_platform.h"
 
@@ -46,7 +46,6 @@
 #include "os_buf.h"
 #include "os_mem.h"
 #include "os_clog.h"
-#include "os_tlog.h"
 #include "os_sockaddr.h"
 #include "os_socket.h"
 #include "os_sockopt.h"

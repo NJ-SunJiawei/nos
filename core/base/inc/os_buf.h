@@ -26,7 +26,6 @@ typedef struct os_cluster_s {
 typedef void os_buf_pool_t;
 #else
 typedef struct os_buf_pool_s os_buf_pool_t;
-void os_buf_show_avail(os_buf_pool_t *pool);
 #endif
 typedef struct os_buf_s {
     os_lnode_t lnode;
@@ -91,6 +90,7 @@ void *os_buf_push(os_buf_t *buf, unsigned int len);
 void *os_buf_pull_inline(os_buf_t *buf, unsigned int len);
 void *os_buf_pull(os_buf_t *buf, unsigned int len);
 int os_buf_trim(os_buf_t *buf, int len);
+void os_buf_show_avail(os_buf_pool_t *pool);
 
 #ifdef __cplusplus
 }

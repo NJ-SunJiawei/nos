@@ -7,9 +7,6 @@
 ************************************************************************/
 #include "os_init.h"
 
-#undef OS_LOG_DOMAIN
-#define OS_LOG_DOMAIN __os_sock_domain
-
 int os_socketpair(int family, int type, int protocol, os_socket_t fd[2])
 {
 #ifndef WIN32

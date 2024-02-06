@@ -21,6 +21,7 @@ extern "C" {
  */
 #if !defined(_WIN32)
 #define os_thread_mutex_t pthread_mutex_t
+#define os_thread_key_t pthread_key_t
 #define os_thread_mutex_init(_n) (void)pthread_mutex_init((_n), NULL)
 #define os_thread_mutex_lock (void)pthread_mutex_lock
 #define os_thread_mutex_trylock (void)pthread_mutex_trylock
@@ -59,6 +60,7 @@ __attribute__((unused)) PRIVATE os_inline int os_thread_cond_timedwait(
 #define os_thread_join(_n) pthread_join((_n), NULL)
 #else
 #define os_thread_mutex_t CRITICAL_SECTION
+#define os_thread_key_t
 #define os_thread_mutex_init InitializeCriticalSection
 #define os_thread_mutex_trylock TryEnterCriticalSection
 #define os_thread_mutex_lock EnterCriticalSection

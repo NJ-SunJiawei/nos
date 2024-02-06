@@ -7,10 +7,6 @@
 ************************************************************************/
 #include "os_init.h"
 
-int __os_mem_domain;
-int __os_sock_domain;
-int __os_sctp_domain;
-
 PRIVATE os_context_t self = {
     .buf.pool = 8,
     .buf.config_pool = 8,
@@ -29,31 +25,32 @@ _CONF_API_ os_context_t *os_global_context(void)
 
 _ENTER_API_ void os_core_initialize(void)
 {
-	os_clog_domain_init();
+#ifdef HAVE_SETRLIMIT
+	os_ctlog_enable_coredump(true);
+#endif
     os_cdlog_init();
+
+	os_ctlog_init();
+	os_ctlog_start_count_limit();
 
 #if OS_USE_TALLOC == 1
 	os_kmem_init();
 #else
     os_buf_init();
 #endif
-    os_socket_init();
 
-	//log module install
-    os_log_install_domain(&__os_mem_domain, "mem", self.log.level);
-    os_log_install_domain(&__os_sock_domain, "sock", self.log.level);
-    os_log_install_domain(&__os_sctp_domain, "sctp", self.log.level);
 }
 
 _EXIT_API_ void os_core_terminate(void)
 {
-    os_socket_final();
+	os_ctlog_stop_count_limit();
+
 #if OS_USE_TALLOC == 1
 	os_kmem_final();
 #else
     os_buf_final();
 #endif
 
+
     os_cdlog_final();
-	os_clog_domain_final();
 }

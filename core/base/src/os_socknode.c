@@ -17,9 +17,6 @@
 
 #include "os_init.h"
 
-#undef OS_LOG_DOMAIN
-#define OS_LOG_DOMAIN __os_sock_domain
-
 os_socknode_t *os_socknode_new(os_sockaddr_t *addr)
 {
     os_socknode_t *node = NULL;

@@ -16,9 +16,7 @@
 extern "C" {
 #endif
 
-#define RLOG_SEGFAULT_STR "Segmentation Fault Occurred\n%s"
-
-typedef unsigned int LOGID;
+#define CLOG_SEGFAULT_STR "Segmentation Fault Occurred\n%s"
 
 #define MAX_FILE_SIZE  			        3145728 /* 3MB */
 #define MAX_LOG_LEN				        256
@@ -31,15 +29,14 @@ typedef unsigned int LOGID;
 #define CLOG_MAX_FILES		 			5
 #define CLOG_MAX_TIME_STAMP 			80
 #define CLOG_MAX_TAX_NAME				16
-#define CLOG_FIFO_FILE					"/tmp/l2logs"
-#define CLOG_CIRBUF_READ_INTERVAL	1	/* 60 seconds read interval */
+#define CLOG_CIRBUF_READ_INTERVAL	    1	/* 60 seconds read interval */
 #define CLOG_MAX_THREADS				16
 #define CLOG_TIME_ZONE_LEN				8
-#define CLOG_MAX_STACK_DEPTH 		24
-#define CLOG_MAX_BACKTRACE_BUFSZ	2048
-#define CLOG_READ_POS_THRESHOLD 300
-#define CLOG_FIXED_LENGTH_BUFFER_SIZE 50
-#define CLOGTICKSCNTTOPRCL2LOGS 10
+#define CLOG_MAX_STACK_DEPTH 		    24
+#define CLOG_MAX_BACKTRACE_BUFSZ	    2048
+#define CLOG_READ_POS_THRESHOLD         300
+#define CLOG_FIXED_LENGTH_BUFFER_SIZE   50
+#define CLOGTICKSCNTTOPRCLOGS         10
 
 /* Console handling */
 #define CLOG_CTRL_L    12
@@ -50,6 +47,28 @@ typedef unsigned int LOGID;
 
 /*L2 Logging */
 #define PROCESS_L2LOG_TTI 10
+#define CLOG_LIMIT_L2_COUNT 45
+#define L2LOG_BUFF_SIZE 10000
+#define L2LOG_BUFF_BLOCK_SIZE L2LOG_BUFF_SIZE/4
+#define L2_PROC_ID 1
+
+/*L3 Logging */
+#define CLOG_LIMIT_L3_COUNT 500
+
+#define TA_NOR              "\033[0m"       /* all off */
+#define TA_FGC_BLACK        "\033[30m"      /* Black */
+#define TA_FGC_RED          "\033[31m"      /* Red */
+#define TA_FGC_BOLD_RED     "\033[1;31m"    /* Bold Red */
+#define TA_FGC_GREEN        "\033[32m"      /* Green */
+#define TA_FGC_BOLD_GREEN   "\033[1;32m"    /* Bold Green */
+#define TA_FGC_YELLOW       "\033[33m"      /* Yellow */
+#define TA_FGC_BOLD_YELLOW  "\033[1;33m"    /* Bold Yellow */
+#define TA_FGC_BOLD_BLUE    "\033[1;34m"    /* Bold Blue */
+#define TA_FGC_BOLD_MAGENTA "\033[1;35m"    /* Bold Magenta */
+#define TA_FGC_BOLD_CYAN    "\033[1;36m"    /* Bold Cyan */
+#define TA_FGC_WHITE        "\033[37m"      /* White  */
+#define TA_FGC_BOLD_WHITE   "\033[1;37m"    /* Bold White  */
+#define TA_FGC_DEFAULT      "\033[39m"      /* default */
 
 typedef enum {
 	LOG_ARG_INT,
@@ -67,10 +86,10 @@ typedef enum cLogCntLmt
 	
 typedef enum
 {
-	L_TIME_REFERENCE=0,
-	L_TIME_DELIMITER,
-	L_SIGSEGV,
-	L_TIME_TTI_UPDT
+	TIME_REFERENCE=0,
+	TIME_DELIMITER,
+	SIGSEGV,
+	TIME_TTI_UPDT
 } LOGID_TYPE;
 	
 typedef struct
@@ -102,7 +121,7 @@ typedef struct
 	unsigned int arg2;
 	unsigned int arg3;
 	unsigned int arg4;
-   char unusedByte[19]; /* To make it as 50 byte */
+    char unusedByte[19]; /* To make it as 50 byte */
 }  OS_GNUC_PACKED ARG4DATA;
 
 typedef struct
@@ -133,37 +152,14 @@ typedef struct
 typedef struct {
 	
 	char	szTaskName[CLOG_MAX_TAX_NAME];
-	unsigned char*	logBuff;		/* LOG Buffer */
+	unsigned char*	logBuff;	/* LOG Buffer */
 	unsigned int	logBufLen;	/* Data Written till now */
 	unsigned int	logReadPos; /* Reader thread position */
 	unsigned char	listIndex;	/* Index to global list */
-
 } THREAD_DATA;
 
-void readL2LogBuff(void);
-void processL2LogBuff(void);
-signed short  sendL2LogBuftoL3(void);
-void clInitL2Log(void);
-/* Extern for soc specific file */
-void clProcessLogBufFromL2(void *mBuf);
-void clInitL2SocSpecific(void);
-//extern void processL2LogBuff(void);
-void clProcessTicks(void);
-void clGetL2LogBufPtr (void *mBuf, unsigned int *logLen,unsigned char **logPtr);
-void clInvalidateL2LogsInCache(unsigned char *ptr,unsigned int len);
 
-extern unsigned char	 *g_l2rlogBuf;		  /* buffer pointer for shared memory allocation */
-extern unsigned char	 *g_l2LogBufStartPtr; /* buffer pointer where logs has to be written */
-extern unsigned char	 *g_l2LogBufBasePtr;  /* Base pointer for log buffer */
-extern unsigned char	 *g_logBufRcvdFromL2; /* Buffer pointer received from L2 at L3*/
-extern unsigned char	 *g_l2LogBaseBuff;	  /* Base log buffer received at L3 */
-extern unsigned int 	g_l2LogBufLen;		/* Log Buffer length written at L2 */
-extern unsigned int 	startL2Logging; 	/* flag to start processing of L2 logs */
-extern unsigned int 	g_l2logBuffPos; 	/* Log Buffer block which is in use for L2 logging */
-extern unsigned char	  g_writeCirBuf;	  /* Flag to indicate whether to write logs or not */
-
-void hex2Asii(char* p, const char* h, int hexlen);
-
+void hex_to_asii(char* p, const char* h, int hexlen);
 
 #ifdef __cplusplus
 }

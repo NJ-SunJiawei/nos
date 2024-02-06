@@ -8,7 +8,8 @@ set(SRC_FILES
     os_errno.c
     os_str.c
     os_time.c
-    os_tlog.c
+    os_cdlog.c
+	os_ctlog.c
     os_list.c
     os_hash.c
     os_buf.c

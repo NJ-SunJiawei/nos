@@ -34,40 +34,26 @@ extern "C" {
 #define os_log2    cdlog_show
 #define os_log3    cdlog_show
 #define os_log4    cdlog_show
-#define os_logx    cdlog_show
+//#define os_logx    cdlog_show
 #define os_logp0   cdlog_show_sp
 #define os_logp1   cdlog_show_sp
 #define os_logp2   cdlog_show_sp
 #define os_logp3   cdlog_show_sp
 #define os_logp4   cdlog_show_sp
-#elif defined(OS_USE_CMLOG)
-#define os_logs    CMLOG_STR
-#define os_logh    CMLOG_HEX
-#define os_log0    CMLOG0
-#define os_log1    CMLOG1
-#define os_log2    CMLOG2
-#define os_log3    CMLOG3
-#define os_log4    CMLOG4
-#define os_logx    CMLOGX
-#define os_logp0   CMLOG_SP0
-#define os_logp1   CMLOG_SP1
-#define os_logp2   CMLOG_SP2
-#define os_logp3   CMLOG_SP3
-#define os_logp4   CMLOG_SP4
-#elif defined(OS_USE_CFLOG)
-#define os_logs    CFLOG_STR
-#define os_logh    CFLOG_HEX
-#define os_log0    CFLOG0
-#define os_log1    CFLOG1
-#define os_log2    CFLOG2
-#define os_log3    CFLOG3
-#define os_log4    CFLOG4
-#define os_logx    CFLOGX
-#define os_logp0   CFLOG_SP0
-#define os_logp1   CFLOG_SP1
-#define os_logp2   CFLOG_SP2
-#define os_logp3   CFLOG_SP3
-#define os_logp4   CFLOG_SP4
+#elif
+#define os_logs    CTLOG_STR
+#define os_logh    CTLOG_HEX
+#define os_log0    CTLOG0
+#define os_log1    CTLOG1
+#define os_log2    CTLOG2
+#define os_log3    CTLOG3
+#define os_log4    CTLOG4
+//#define os_logx    CTLOGX
+#define os_logp0   CTLOG_SP0
+#define os_logp1   CTLOG_SP1
+#define os_logp2   CTLOG_SP2
+#define os_logp3   CTLOG_SP3
+#define os_logp4   CTLOG_SP4
 #endif
 /****************************************/
 /***************declaration**************/
@@ -79,9 +65,6 @@ typedef struct os_poll_s os_poll_t;
 
 /****************************************/
 /***************global*******************/
-extern int __os_mem_domain;
-extern int __os_sock_domain;
-extern int __os_sctp_domain;
 
 
 #ifdef __cplusplus

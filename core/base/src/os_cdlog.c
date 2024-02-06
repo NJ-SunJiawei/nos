@@ -17,20 +17,7 @@
 
 #include "os_init.h"
 #include <libgen.h>
-#define TA_NOR              "\033[0m"       /* all off */
-#define TA_FGC_BLACK        "\033[30m"      /* Black */
-#define TA_FGC_RED          "\033[31m"      /* Red */
-#define TA_FGC_BOLD_RED     "\033[1;31m"    /* Bold Red */
-#define TA_FGC_GREEN        "\033[32m"      /* Green */
-#define TA_FGC_BOLD_GREEN   "\033[1;32m"    /* Bold Green */
-#define TA_FGC_YELLOW       "\033[33m"      /* Yellow */
-#define TA_FGC_BOLD_YELLOW  "\033[1;33m"    /* Bold Yellow */
-#define TA_FGC_BOLD_BLUE    "\033[1;34m"    /* Bold Blue */
-#define TA_FGC_BOLD_MAGENTA "\033[1;35m"    /* Bold Magenta */
-#define TA_FGC_BOLD_CYAN    "\033[1;36m"    /* Bold Cyan */
-#define TA_FGC_WHITE        "\033[37m"      /* White  */
-#define TA_FGC_BOLD_WHITE   "\033[1;37m"    /* Bold White  */
-#define TA_FGC_DEFAULT      "\033[39m"      /* default */
+#include "private/os_cdlog_priv.h"
 
 typedef enum {
     OS_LOG_STDERR_TYPE,
@@ -59,21 +46,208 @@ typedef struct cdlog_s {
         uint8_t linefeed:1;)
     } print;
 
-    void (*writer)(cdlog_t *cdlog, cdlog_level_e level, const char *string);
+    void (*writer)(os_cdlog_t *cdlog, os_cdlog_level_e level, const char *string);
 
-} cdlog_t;
+} os_cdlog_t;
 
 
-PRIVATE OS_POOL(cdlog_pool, cdlog_t);
+PRIVATE OS_POOL(cdlog_pool, os_cdlog_t);
 PRIVATE OS_LIST(cdlog_list);
 
-PRIVATE cdlog_t *add_cdlog(cdlog_type_e type);
+PRIVATE os_cdlog_t *add_cdlog(cdlog_type_e type);
 PRIVATE char *cdlog_timestamp(char *buf, char *last, int use_color);
 PRIVATE char *cdlog_domain(char *buf, char *last, const char *name, int use_color);
 PRIVATE char *cdlog_content(char *buf, char *last, const char *format, va_list ap);
-PRIVATE char *cdlog_level(char *buf, char *last, cdlog_level_e level, int use_color);
+PRIVATE char *cdlog_level(char *buf, char *last, os_cdlog_level_e level, int use_color);
 PRIVATE char *cdlog_linefeed(char *buf, char *last);
-PRIVATE void file_writer(cdlog_t *cdlog, cdlog_level_e level, const char *string);
+PRIVATE void file_writer(os_cdlog_t *cdlog, os_cdlog_level_e level, const char *string);
+
+
+typedef struct os_cdlog_domain_s {
+    os_lnode_t node;
+
+    int id;
+    os_cdlog_level_e level;
+    const char *name;
+} os_cdlog_domain_t;
+
+PRIVATE OS_POOL(domain_pool, os_cdlog_domain_t);
+PRIVATE OS_LIST(domain_list);
+
+os_cdlog_domain_t *os_cdlog_add_domain(const char *name, os_cdlog_level_e level)
+{
+    os_cdlog_domain_t *domain = NULL;
+
+    os_assert(name);
+
+    os_pool_alloc(&domain_pool, &domain);
+    os_assert(domain);
+
+    domain->name = name;
+    domain->id = os_pool_index(&domain_pool, domain);
+    domain->level = level;
+
+    os_list_add(&domain_list, domain);
+
+    return domain;
+}
+
+os_cdlog_domain_t *os_cdlog_find_domain(const char *name)
+{
+    os_cdlog_domain_t *domain = NULL;
+
+    os_assert(name);
+
+    os_list_for_each(&domain_list, domain)
+        if (!os_strcasecmp(domain->name, name))
+            return domain;
+
+    return NULL;
+}
+
+void os_cdlog_remove_domain(os_cdlog_domain_t *domain)
+{
+    os_assert(domain);
+
+    os_list_remove(&domain_list, domain);
+    os_pool_free(&domain_pool, domain);
+}
+
+void os_cdlog_set_domain_level(int id, os_cdlog_level_e level)
+{
+    os_cdlog_domain_t *domain = NULL;
+
+    os_assert(id > 0 && id <= os_global_context()->log.domain_pool);
+
+    domain = os_pool_find(&domain_pool, id);
+    os_assert(domain);
+
+    domain->level = level;
+}
+
+os_cdlog_level_e os_cdlog_get_domain_level(int id)
+{
+    os_cdlog_domain_t *domain = NULL;
+
+    os_assert(id > 0 && id <= os_global_context()->log.domain_pool);
+
+    domain = os_pool_find(&domain_pool, id);
+    os_assert(domain);
+
+    return domain->level;
+}
+
+const char *os_cdlog_get_domain_name(int id)
+{
+    os_cdlog_domain_t *domain = NULL;
+
+    os_assert(id > 0 && id <= os_global_context()->log.domain_pool);
+
+    domain = os_pool_find(&domain_pool, id);
+    os_assert(domain);
+
+    return domain->name;
+}
+
+int os_cdlog_get_domain_id(const char *name)
+{
+    os_cdlog_domain_t *domain = NULL;
+
+    os_assert(name);
+    
+    domain = os_cdlog_find_domain(name);
+    os_assert(domain);
+
+    return domain->id;
+}
+
+_API_ void os_cdlog_install_domain(int *domain_id, const char *name, os_cdlog_level_e level)
+{
+    os_cdlog_domain_t *domain = NULL;
+
+    os_assert(domain_id);
+    os_assert(name);
+
+    domain = os_cdlog_find_domain(name);
+    if (domain) {
+        os_cdlogs(WARN, "`%s` log-domain duplicated", name);
+        if (level != domain->level) {
+            os_cdlogs(WARN, ">>>[%s]", g_logStr[domain->level]);
+	        os_cdlogs(WARN, "[%s]log-level changed<<<", g_logStr[level]);
+            os_cdlog_set_domain_level(domain->id, level);
+        }
+    } else {
+        domain = os_cdlog_add_domain(name, level);
+        os_assert(domain);
+    }
+
+    *domain_id = domain->id;
+}
+
+void os_cdlog_set_mask_level(const char *_mask, os_cdlog_level_e level)
+{
+    os_cdlog_domain_t *domain = NULL;
+
+    if (_mask) {
+        const char *delim = " \t\n,:";
+        char *mask = NULL;
+        char *saveptr;
+        char *name;
+
+        mask = os_strdup(_mask);
+        os_assert(mask);
+
+        for (name = os_strtok_r(mask, delim, &saveptr);
+            name != NULL;
+            name = os_strtok_r(NULL, delim, &saveptr)) {
+
+            domain = os_cdlog_find_domain(name);
+            if (domain)
+                domain->level = level;
+        }
+
+        os_free(mask);
+    } else {//all
+        os_list_for_each(&domain_list, domain)
+            domain->level = level;
+    }
+}
+
+PRIVATE os_cdlog_level_e os_cdlog_level_from_string(const char *string)
+{
+    os_cdlog_level_e level = OS_ERROR;
+
+    if (!strcasecmp(string, "none")) level = NONE;
+    else if (!strcasecmp(string, "fatal")) level = FATAL;
+    else if (!strcasecmp(string, "error")) level = ERROR;
+    else if (!strcasecmp(string, "warn")) level = WARN;
+    else if (!strcasecmp(string, "info")) level = INFO;
+    else if (!strcasecmp(string, "debug")) level = DEBUG;
+    else if (!strcasecmp(string, "trace")) level = TRACE;
+
+    return level;
+}
+
+_API_ int os_cdlog_config_domain(const char *domain_mask, const char *level)
+{
+    if (domain_mask || level) {
+        int l = os_global_context()->log.level;
+
+        if (level) {
+            l = os_cdlog_level_from_string(level);
+            if (l == OS_ERROR) {
+                os_cdlog1(ERROR, "Invalid LOG-LEVEL "
+                        "[none:fatal|error|warn|info|debug|trace]: %s\n",
+                        level);
+                return OS_ERROR;
+            }
+        }
+
+        os_cdlog_set_mask_level(domain_masks, l);
+    }
+
+    return OS_OK;
+}
 
 
 /////////////////////////////////////////////////////////////
@@ -81,24 +255,33 @@ _API_ void os_cdlog_init(void)
 {
     os_pool_init(&cdlog_pool, os_global_context()->log.pool);
 
-    os_log_add_domain("os", os_global_context()->log.level);
-    cdlog_add_stderr();
+    os_pool_init(&domain_pool, os_global_context()->log.domain_pool);
+
+    os_cdlog_add_domain("os", os_global_context()->log.level);
+    os_cdlog_add_stderr();
 }
 
 _API_ void os_cdlog_final(void)
 {
-    cdlog_t *cdlog, *saved_cdlog;
+    os_cdlog_t *cdlog, *saved_cdlog;
 
     os_list_for_each_safe(&cdlog_list, saved_cdlog, cdlog)
         cdlog_remove(cdlog);
     os_pool_final(&cdlog_pool);
+
+    os_cdlog_domain_t *domain, *saved_domain;
+
+    os_list_for_each_safe(&domain_list, saved_domain, domain)
+        os_cdlog_remove_domain(domain);
+    os_pool_final(&domain_pool);
+
 }
 
 //////////////////////////////////////////////////////////////////////////////////
 
-cdlog_t *cdlog_add_stderr(void)
+os_cdlog_t *os_cdlog_add_stderr(void)
 {
-    cdlog_t *cdlog = NULL;
+    os_cdlog_t *cdlog = NULL;
     
     cdlog = add_cdlog(OS_LOG_STDERR_TYPE);
     os_assert(cdlog);
@@ -113,10 +296,10 @@ cdlog_t *cdlog_add_stderr(void)
     return cdlog;
 }
 
-cdlog_t *cdlog_add_file(const char *name)
+os_cdlog_t *os_cdlog_add_file(const char *name)
 {
     FILE *out = NULL;
-    cdlog_t *cdlog = NULL;
+    os_cdlog_t *cdlog = NULL;
 
     out = fopen(name, "a");
     if (!out) 
@@ -133,7 +316,7 @@ cdlog_t *cdlog_add_file(const char *name)
     return cdlog;
 }
 
-void cdlog_remove(cdlog_t *cdlog)
+void cdlog_remove(os_cdlog_t *cdlog)
 {
     os_assert(cdlog);
 
@@ -149,10 +332,10 @@ void cdlog_remove(cdlog_t *cdlog)
 }
 
 
-void cdlog_vprintf(cdlog_level_e level, int id, os_err_t err, const char *file, int line, const char *func, int content_only, const char *format, va_list ap)
+void cdlog_vprintf(os_cdlog_level_e level, int id, os_err_t err, const char *file, int line, const char *func, int content_only, const char *format, va_list ap)
 {
-    cdlog_t *cdlog = NULL;
-    os_log_domain_t *domain = NULL;
+    os_cdlog_t *cdlog = NULL;
+    os_cdlog_domain_t *domain = NULL;
 
     char cdlogstr[OS_HUGE_LEN];
     char *p, *last;
@@ -229,7 +412,7 @@ void cdlog_vprintf(cdlog_level_e level, int id, os_err_t err, const char *file, 
     }
 }
 
-void cdlog_printf(cdlog_level_e level, int id, os_err_t err, char *file, int line, const char *func, int content_only, const char *format, ...)
+void cdlog_printf(os_cdlog_level_e level, int id, os_err_t err, char *file, int line, const char *func, int content_only, const char *format, ...)
 {
     va_list args;
 
@@ -238,7 +421,7 @@ void cdlog_printf(cdlog_level_e level, int id, os_err_t err, char *file, int lin
     va_end(args);
 }
 
-void cdlog_hexdump_func(cdlog_level_e level, int id, const unsigned char *data, size_t len)
+void cdlog_hexdump_func(os_cdlog_level_e level, int id, const unsigned char *data, size_t len)
 {
     size_t n, m;
     char dumpstr[OS_HUGE_LEN];
@@ -270,9 +453,9 @@ void cdlog_hexdump_func(cdlog_level_e level, int id, const unsigned char *data, 
     cdlog_print(level, "%s", dumpstr);
 }
 
-PRIVATE cdlog_t *add_cdlog(cdlog_type_e type)
+PRIVATE os_cdlog_t *add_cdlog(cdlog_type_e type)
 {
-    cdlog_t *cdlog = NULL;
+    os_cdlog_t *cdlog = NULL;
 
     os_pool_alloc(&cdlog_pool, &cdlog);
     os_assert(cdlog);
@@ -320,7 +503,7 @@ PRIVATE char *cdlog_domain(char *buf, char *last, const char *name, int use_colo
     return buf;
 }
 
-PRIVATE char *cdlog_level(char *buf, char *last, cdlog_level_e level, int use_color)
+PRIVATE char *cdlog_level(char *buf, char *last, os_cdlog_level_e level, int use_color)
 {
     const char *colors[] = {
         TA_NOR,
@@ -367,7 +550,7 @@ PRIVATE char *cdlog_linefeed(char *buf, char *last)
     return buf;
 }
 
-PRIVATE void file_writer(cdlog_t *cdlog, cdlog_level_e level, const char *string)
+PRIVATE void file_writer(os_cdlog_t *cdlog, os_cdlog_level_e level, const char *string)
 {
     fprintf(cdlog->file.out, "%s", string);
     fflush(cdlog->file.out);

@@ -41,8 +41,6 @@
 
 #include "os_init.h"
 
-#undef OS_LOG_DOMAIN
-#define OS_LOG_DOMAIN __os_sock_domain
 
 /* If you want to use getnameinfo,
  * you need to consider DNS query delay (about 10 seconds) */

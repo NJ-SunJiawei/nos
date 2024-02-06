@@ -17,9 +17,6 @@
 
 #include "os_init.h"
 
-#undef OS_LOG_DOMAIN
-#define OS_LOG_DOMAIN __os_sock_domain
-
 void os_sockopt_init(os_sockopt_t *option)
 {
     os_assert(option);
