@@ -310,6 +310,8 @@ void os_cdlog_final(void);
 os_cdlog_t *os_cdlog_add_stderr(void);
 os_cdlog_t *os_cdlog_add_file(void);
 void os_cdlog_cycle(int sig);
+void os_cdlog_enable_coredump(bool enable_core);
+
 ////////////////////////////////////////////////////////////////////////////////
 
 void os_ctlog_set_fileSize_limit(unsigned int maxFileSize);

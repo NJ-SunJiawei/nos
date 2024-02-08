@@ -63,7 +63,7 @@ PRIVATE char *cdlog_content(char *buf, char *last, const char *format, va_list a
 PRIVATE char *cdlog_level(char *buf, char *last, os_cdlog_level_e level, int use_color);
 PRIVATE char *cdlog_linefeed(char *buf, char *last);
 PRIVATE void file_writer(os_cdlog_t *cdlog, os_cdlog_level_e level, const char *string);
-PRIVATE void IO_writer(os_cdlog_t *cdlog, os_cdlog_level_e level, const char *string);
+PRIVATE void io_writer(os_cdlog_t *cdlog, os_cdlog_level_e level, const char *string);
 PRIVATE int file_cycle(os_cdlog_t *log);
 PRIVATE void catch_segViolation(int sig);
 
@@ -323,7 +323,7 @@ os_cdlog_t *os_cdlog_add_stderr(void)
     os_assert(cdlog);
 
     cdlog->file.out = stderr;
-    cdlog->writer = IO_writer;
+    cdlog->writer = io_writer;
 
 #if !defined(_WIN32)
     cdlog->print.color = 1;
@@ -371,6 +371,15 @@ void os_cdlog_set_log_path(const char* log_dir)
 void os_cdlog_set_file_name(const char* file_name)
 {
 	strncpy(g_fileName, file_name, MAX_FILENAME_LEN);
+}
+
+void os_cdlog_enable_coredump(bool enable_core)
+{
+#ifdef HAVE_SETRLIMIT
+	struct rlimit core_limits;
+	core_limits.rlim_cur = core_limits.rlim_max = enable_core ? RLIM_INFINITY : 0;
+	setrlimit(RLIMIT_CORE, &core_limits);
+#endif
 }
 
 PRIVATE void cdlog_timestamp(char* ts)
@@ -460,12 +469,12 @@ void cdlog_vprintf(os_cdlog_level_e level, int id, os_err_t err, const char *fil
     char cdlogstr[OS_HUGE_LEN];
     char *p, *last;
 
-    int wrote_stderr = 0;
+    //int wrote_stderr = 0;
 
     os_list_for_each(&cdlog_list, cdlog) {
         domain = os_pool_find(&domain_pool, id);
         if (!domain) {
-            fprintf(stderr, "No tLogDomain[id:%d] in %s:%d", id, file, line);
+            fprintf(stderr, "No LogDomain[id:%d] in %s:%d", id, file, line);
             os_assert_if_reached();
         }
         if (level > domain->level)
@@ -502,11 +511,11 @@ void cdlog_vprintf(os_cdlog_level_e level, int id, os_err_t err, const char *fil
 		
         cdlog->writer(cdlog, level, cdlogstr);
         
-        if (cdlog->type == OS_LOG_STDERR_TYPE)
-            wrote_stderr = 1;
+        //if (cdlog->type == OS_LOG_STDERR_TYPE)
+        //    wrote_stderr = 1;
     }
 
-    if (!wrote_stderr)
+    /*if (!wrote_stderr)
     {
         int use_color = 0;
 #if !defined(_WIN32)
@@ -529,7 +538,7 @@ void cdlog_vprintf(os_cdlog_level_e level, int id, os_err_t err, const char *fil
 
         fprintf(stderr, "%s", cdlogstr);
         fflush(stderr);
-    }
+    }*/
 }
 
 void cdlog_printf(os_cdlog_level_e level, int id, os_err_t err, char *file, int line, const char *func, int content_only, const char *format, ...)
@@ -683,7 +692,7 @@ PRIVATE void file_writer(os_cdlog_t *cdlog, os_cdlog_level_e level, const char *
 	}
 }
 
-PRIVATE void IO_writer(os_cdlog_t *cdlog, os_cdlog_level_e level, const char *string)
+PRIVATE void io_writer(os_cdlog_t *cdlog, os_cdlog_level_e level, const char *string)
 {
     fprintf(cdlog->file.out, "%s", string);
     fflush(cdlog->file.out);
@@ -701,6 +710,7 @@ PRIVATE int file_cycle(os_cdlog_t *log)
 
 PRIVATE void catch_segViolation(int sig)
 {
+#if HAVE_BACKTRACE
 	int i, nStrLen, nDepth;
 
 	void 	*stackTraceBuf[CLOG_MAX_STACK_DEPTH];
@@ -734,7 +744,7 @@ PRIVATE void catch_segViolation(int sig)
 	    }
 		free(strings);
 	}
-
+#endif
 	os_cdlog_cycle(SIGSEGV);
 }
 

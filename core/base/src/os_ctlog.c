@@ -51,6 +51,7 @@ unsigned char g_writeCirBuf = 0;
 int thread_signalled;
 THREAD_DATA *g_pSingCirBuff = NULL;
 unsigned short g_prevLogOffset=0;
+int g_threadRunFg = 0;
 
 PRIVATE void cl_read_cirbuf(void);
 #endif
@@ -207,7 +208,7 @@ PRIVATE void* cl_cirbuf_read_thread(void* arg)
 
 	//fprintf(stderr, "Circular Buffer Reader thread started\n");
 
-	while(1)
+	while(!g_threadRunFg)
 	{
 		/*this thread is not active and waiting to timeout */
 		thread_signalled = 0;
@@ -438,6 +439,7 @@ PRIVATE void cl_close_connection(int sockfd)
 PRIVATE void cl_flush_data(int sig)
 {
 #ifdef CLOG_USE_CIRCULAR_BUFFER
+	g_threadRunFg = 1;
 	cl_read_cirbuf();
 #endif
 	g_clogWriteCount = 0;
@@ -459,6 +461,7 @@ PRIVATE void cl_flush_data(int sig)
 
 PRIVATE void cl_catch_segViolation(int sig)
 {
+#if HAVE_BACKTRACE
 	int i, nStrLen, nDepth;
 
 	void 	*stackTraceBuf[CLOG_MAX_STACK_DEPTH];
@@ -496,7 +499,7 @@ PRIVATE void cl_catch_segViolation(int sig)
 
 		free(strings);
 	}
-
+#endif
 	cl_flush_data(SIGSEGV);
 }
 
@@ -679,9 +682,11 @@ void os_ctlog_printf_config(void)
 
 void os_ctlog_enable_coredump(bool enable_core)
 {
+#ifdef HAVE_SETRLIMIT
 	struct rlimit core_limits;
 	core_limits.rlim_cur = core_limits.rlim_max = enable_core ? RLIM_INFINITY : 0;
 	setrlimit(RLIMIT_CORE, &core_limits);
+#endif
 }
 
 void os_ctlog_set_fileName(const char* fileName)
