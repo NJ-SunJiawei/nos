@@ -32,7 +32,8 @@ typedef struct cdlog_s {
     union {
         struct {
             FILE *out;
-            const char *name;
+			int number;
+			int idx;
         } file;
     };
 
@@ -54,6 +55,7 @@ typedef struct cdlog_s {
 PRIVATE OS_POOL(cdlog_pool, os_cdlog_t);
 PRIVATE OS_LIST(cdlog_list);
 
+PRIVATE void cdlog_create_new_file(void);
 PRIVATE os_cdlog_t *add_cdlog(cdlog_type_e type);
 PRIVATE char *cdlog_timestamp(char *buf, char *last, int use_color);
 PRIVATE char *cdlog_domain(char *buf, char *last, const char *name, int use_color);
@@ -61,7 +63,16 @@ PRIVATE char *cdlog_content(char *buf, char *last, const char *format, va_list a
 PRIVATE char *cdlog_level(char *buf, char *last, os_cdlog_level_e level, int use_color);
 PRIVATE char *cdlog_linefeed(char *buf, char *last);
 PRIVATE void file_writer(os_cdlog_t *cdlog, os_cdlog_level_e level, const char *string);
+PRIVATE void IO_writer(os_cdlog_t *cdlog, os_cdlog_level_e level, const char *string);
+PRIVATE int file_cycle(os_cdlog_t *log);
+PRIVATE void catch_segViolation(int sig);
 
+PRIVATE char g_logDir[MAX_FILENAME_LEN] = "/var/log";
+PRIVATE char g_fileName[MAX_FILENAME_LEN] = "os";
+PRIVATE char g_fileList[CLOG_MAX_FILES][MAX_FILENAME_LENGTH];
+PRIVATE unsigned int g_uiMaxFileSizeLimit = MAX_FILE_SIZE;
+PRIVATE unsigned char g_nMaxLogFiles = 1;
+PRIVATE int g_nCurrFileIdx = 0;
 
 typedef struct os_cdlog_domain_s {
     os_lnode_t node;
@@ -250,9 +261,12 @@ _API_ int os_cdlog_config_domain(const char *domain_mask, const char *level)
 }
 
 
-/////////////////////////////////////////////////////////////
 _API_ void os_cdlog_init(void)
 {
+	signal(SIGSEGV, catch_segViolation);
+	signal(SIGBUS,  catch_segViolation);
+	signal(SIGINT,  os_cdlog_cycle);
+
     os_pool_init(&cdlog_pool, os_global_context()->log.pool);
 
     os_pool_init(&domain_pool, os_global_context()->log.domain_pool);
@@ -277,7 +291,29 @@ _API_ void os_cdlog_final(void)
 
 }
 
-//////////////////////////////////////////////////////////////////////////////////
+void os_cdlog_cycle(int sig)
+{
+    os_cdlog_t *log = NULL;
+
+    os_list_for_each(&cdlog_list, log) {
+        switch(log->type) {
+        case OS_LOG_FILE_TYPE:
+            file_cycle(log);
+        default:
+            break;
+        }
+    }
+
+	if(SIGSEGV == sig)
+	{
+	   signal(sig, SIG_DFL);
+	   kill(getpid(), sig);
+	}
+	else
+	{
+	   exit(0);
+	}
+}
 
 os_cdlog_t *os_cdlog_add_stderr(void)
 {
@@ -287,7 +323,7 @@ os_cdlog_t *os_cdlog_add_stderr(void)
     os_assert(cdlog);
 
     cdlog->file.out = stderr;
-    cdlog->writer = file_writer;
+    cdlog->writer = IO_writer;
 
 #if !defined(_WIN32)
     cdlog->print.color = 1;
@@ -296,25 +332,109 @@ os_cdlog_t *os_cdlog_add_stderr(void)
     return cdlog;
 }
 
-os_cdlog_t *os_cdlog_add_file(const char *name)
+os_cdlog_t *os_cdlog_add_file(void)
 {
     FILE *out = NULL;
     os_cdlog_t *cdlog = NULL;
-
-    out = fopen(name, "a");
-    if (!out) 
-        return NULL;
     
     cdlog = add_cdlog(OS_LOG_FILE_TYPE);
     os_assert(cdlog);
+	
+	cdlog_create_new_file(cdlog);
 
-    cdlog->file.name = name;
     cdlog->file.out = out;
 
     cdlog->writer = file_writer;
 
     return cdlog;
 }
+
+void os_cdlog_set_file_size(unsigned int max_limit_size)
+{
+	g_uiMaxFileSizeLimit = (max_limit_size == 0) ? MAX_FILE_SIZE : max_limit_size*1048576;
+}
+
+void os_cdlog_set_file_num(unsigned char max_file_num)
+{
+	if( max_file_num > CLOG_MAX_FILES || max_file_num == 0 ) {
+		g_nMaxLogFiles = CLOG_MAX_FILES;
+		return;
+	}
+	g_nMaxLogFiles = max_file_num;
+}
+
+void os_cdlog_set_log_path(const char* log_dir)
+{
+	strncpy(g_logDir, log_dir, MAX_FILENAME_LEN);
+}
+
+void os_cdlog_set_file_name(const char* file_name)
+{
+	strncpy(g_fileName, file_name, MAX_FILENAME_LEN);
+}
+
+PRIVATE void cdlog_timestamp(char* ts)
+{
+    struct timeval tv;
+    struct tm tm;
+
+    os_gettimeofday(&tv);
+    os_localtime(tv.tv_sec, &tm);
+
+   	sprintf(ts,"%0.4d/%0.2d/%0.2d %0.2d:%0.2d:%0.2d.%0.6d", tm->tm_year+1900, tm->tm_mon+1, tm->tm_mday, tm->tm_hour, tm->tm_min,tm->tm_sec, tv.tv_usec);
+}
+
+
+PRIVATE void cdlog_create_new_file(os_cdlog_t *cdlog)
+{
+   FILE *fp, *prev_fp = cdlog->file.out;
+   char curTime[CLOG_MAX_TIME_STAMP];
+   int fd;
+
+   DIR *dir = NULL;
+
+   /* get current time, when file is created */
+   cdlog_timestamp(curTime); 
+ 
+   dir  = opendir(g_logDir);
+   if ( dir == NULL )
+   { 
+      mkdir(g_logDir, O_RDWR);
+   }
+   else
+   {
+      closedir(dir);
+   }
+
+   /* remove old file from system */
+   if( g_fileList[cdlog->file.idx][0] != '\0' )
+      unlink(g_fileList[cdlog->file.idx]);
+
+   sprintf(g_fileList[cdlog->file.idx], "%s/%s_%s.log",g_logDir, g_fileName, curTime );
+   fp = fopen(g_fileList[cdlog->file.idx], "w+");
+
+   if( fp == NULL ) {
+      fprintf(stderr, "Failed to open log file %s\n", g_fileList[cdlog->file.idx]);
+      return;
+   }
+
+   fd = fileno(fp);
+
+   cdlog->file.out = fp;
+
+   if( fcntl(fd, F_SETFL, fcntl(fd, F_GETFL, 0) | O_NONBLOCK | O_ASYNC ) == -1 ) {
+      fprintf(stderr, "RLOG: Cannot enable Buffer IO or make file non-blocking\n");
+   }
+
+   setvbuf ( fp , NULL, _IOLBF, 1024 );//line buffer
+
+
+   if( prev_fp != NULL )
+      fclose(prev_fp);
+
+   if(++cdlog->file.idx == g_nMaxLogFiles) cdlog->file.idx = 0;
+}
+
 
 void cdlog_remove(os_cdlog_t *cdlog)
 {
@@ -553,6 +673,68 @@ PRIVATE char *cdlog_linefeed(char *buf, char *last)
 PRIVATE void file_writer(os_cdlog_t *cdlog, os_cdlog_level_e level, const char *string)
 {
     fprintf(cdlog->file.out, "%s", string);
+    fflush(cdlog->file.out);//???
+
+	if(++cdlog->file.number == 200){
+		if(cdlog->file.out && ((unsigned int)(ftell(cdlog->file.out)) > g_uiMaxFileSizeLimit)) {
+			cdlog_create_new_file();
+		}
+		cdlog->file.number = 0;
+	}
+}
+
+PRIVATE void IO_writer(os_cdlog_t *cdlog, os_cdlog_level_e level, const char *string)
+{
+    fprintf(cdlog->file.out, "%s", string);
     fflush(cdlog->file.out);
+}
+
+PRIVATE int file_cycle(os_cdlog_t *log)
+{
+    os_assert(log);
+    os_assert(log->file.out);
+
+    fclose(log->file.out);
+
+    return 0;
+}
+
+PRIVATE void catch_segViolation(int sig)
+{
+	int i, nStrLen, nDepth;
+
+	void 	*stackTraceBuf[CLOG_MAX_STACK_DEPTH];
+	const char* sFileNames[CLOG_MAX_STACK_DEPTH];
+	const char* sFunctions[CLOG_MAX_STACK_DEPTH];
+
+	char **strings; 
+    char buf[CLOG_MAX_STACK_DEPTH*128] = {0};
+
+	nDepth = backtrace(stackTraceBuf, CLOG_MAX_STACK_DEPTH);
+
+
+	strings = (char**) backtrace_symbols(stackTraceBuf, nDepth);
+
+	if(strings){
+		for(i = 0, nStrLen=0; i < nDepth; i++)
+		{
+			sFunctions[i] = (strings[i]);
+			sFileNames[i] = "unknown file";
+
+			printf("BT[%d] : len [%d]: %s\n",i, strlen(sFunctions[i]),strings[i]);
+			sprintf(buf+nStrLen, "	 in Function %s (from %s)\n", sFunctions[i], sFileNames[i]);
+			nStrLen += strlen(sFunctions[i]) + strlen(sFileNames[i]) + 15;
+		}
+
+		os_cdlog_t *log = NULL;
+
+	    os_list_for_each(&cdlog_list, log) {
+			cdlog_print(FATAL, "Segmentation Fault Occurred\n%s\n", buf);
+			fflush(log->file.out);
+	    }
+		free(strings);
+	}
+
+	os_cdlog_cycle(SIGSEGV);
 }
 

@@ -28,7 +28,8 @@ _ENTER_API_ void os_core_initialize(void)
 #ifdef HAVE_SETRLIMIT
 	os_ctlog_enable_coredump(true);
 #endif
-    os_cdlog_init();
+
+    //os_cdlog_init();
 
 	os_ctlog_init();
 	os_ctlog_start_count_limit();
@@ -52,5 +53,5 @@ _EXIT_API_ void os_core_terminate(void)
 #endif
 
 
-    os_cdlog_final();
+   //os_cdlog_final();
 }

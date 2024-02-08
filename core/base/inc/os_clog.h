@@ -239,6 +239,11 @@ void ctlogS(LOGID logId, os_ctlog_level_e logLevel, const char* str, ...);
 typedef log_level_e os_cdlog_level_e;
 typedef struct cdlog_s os_cdlog_t;
 
+void cdlog_remove(os_cdlog_t *cdlog);
+void cdlog_vprintf(os_cdlog_level_e level, int id, os_err_t err, const char *file, int line, const char *func, int content_only, const char *format, va_list ap);
+void cdlog_printf(os_cdlog_level_e level, int domain_id, os_err_t err, char *file, int line, const char *func, int content_only, const char *format, ...) OS_GNUC_PRINTF(8, 9);
+void cdlog_hexdump_func(os_cdlog_level_e level, int domain_id, const unsigned char *data, size_t len);
+
 ////////////////////////////////////////////////////////////////////////////////
 #define os_assert(expr) \
     do { \
@@ -296,20 +301,17 @@ int os_cdlog_get_domain_id(const char *name);
 void os_cdlog_install_domain(int *domain_id, const char *name, os_cdlog_level_e level);
 int os_cdlog_config_domain(const char *domain_mask, const char *level);
 void os_cdlog_set_mask_level(const char *mask, os_cdlog_level_e level);
-////////////////////////////////////////////////////////////////////////////////
+void os_cdlog_set_file_size(unsigned int max_limit_size);
+void os_cdlog_set_file_num(unsigned char max_file_num);
+void os_cdlog_set_log_path(const char* log_dir);
+void os_cdlog_set_file_name(const char* file_name);
 void os_cdlog_init(void);
 void os_cdlog_final(void);
-
 os_cdlog_t *os_cdlog_add_stderr(void);
-os_cdlog_t *os_cdlog_add_file(const char *name);
-void cdlog_remove(os_cdlog_t *cdlog);
+os_cdlog_t *os_cdlog_add_file(void);
+void os_cdlog_cycle(int sig);
+////////////////////////////////////////////////////////////////////////////////
 
-void cdlog_vprintf(os_cdlog_level_e level, int id, os_err_t err, const char *file, int line, const char *func, int content_only, const char *format, va_list ap);
-void cdlog_printf(os_cdlog_level_e level, int domain_id, os_err_t err, char *file, int line, const char *func, int content_only, const char *format, ...)
-	OS_GNUC_PRINTF(8, 9);
-void cdlog_hexdump_func(os_cdlog_level_e level, int domain_id, const unsigned char *data, size_t len);
-
-/////////////////////////////////////////////////////////////
 void os_ctlog_set_fileSize_limit(unsigned int maxFileSize);
 void os_ctlog_set_fileNum(unsigned char maxFiles);
 void os_ctlog_set_remote_flag(int flag);
