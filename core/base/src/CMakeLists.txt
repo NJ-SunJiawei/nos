@@ -141,7 +141,7 @@ ENDIF(HAVE_KQUEUE)
 set(OS_DEV_RANDOM /dev/urandom)
 
 ###################################################
-set(DEBUG 1)
+set(OS_DEBUG 1)
 
 set(HasJava 0)
 set(NO_MINUS_C_MINUS_O 0)

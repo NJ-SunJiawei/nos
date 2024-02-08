@@ -34,13 +34,12 @@ extern "C" {
 #define os_log2    cdlog_show
 #define os_log3    cdlog_show
 #define os_log4    cdlog_show
-//#define os_logx    cdlog_show
 #define os_logp0   cdlog_show_sp
 #define os_logp1   cdlog_show_sp
 #define os_logp2   cdlog_show_sp
 #define os_logp3   cdlog_show_sp
 #define os_logp4   cdlog_show_sp
-#elif
+#else
 #define os_logs    CTLOG_STR
 #define os_logh    CTLOG_HEX
 #define os_log0    CTLOG0
@@ -48,7 +47,6 @@ extern "C" {
 #define os_log2    CTLOG2
 #define os_log3    CTLOG3
 #define os_log4    CTLOG4
-//#define os_logx    CTLOGX
 #define os_logp0   CTLOG_SP0
 #define os_logp1   CTLOG_SP1
 #define os_logp2   CTLOG_SP2

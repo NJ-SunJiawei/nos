@@ -16,6 +16,8 @@
 extern "C" {
 #endif
 
+PRIVATE const char* g_logStr[MAX_LOG_LEVEL] = { "NONE", "FATAL", "ERROR", "WARN", "INFO", "DEBUG", "TRACE", " "};
+
 #define CLOG_SEGFAULT_STR "Segmentation Fault Occurred\n%s"
 
 #define MAX_FILE_SIZE  			        3145728 /* 3MB */
@@ -82,15 +84,7 @@ typedef enum cLogCntLmt
    CL_LOG_COUNT_LIMIT_START = 1,
    CL_LOG_COUNT_LIMIT_STOP
 }cLogCntLmt;
-	
-	
-typedef enum
-{
-	TIME_REFERENCE=0,
-	TIME_DELIMITER,
-	OS_SIGSEGV,
-	TIME_TTI_UPDT
-} LOGID_TYPE;
+
 	
 typedef struct
 {

@@ -16,18 +16,17 @@
 extern "C" {
 #endif
 
-#ifndef OS_LOG_DOMAIN
-#define OS_LOG_DOMAIN      1
+#ifndef CDLOG_DOMAIN
+#define CDLOG_DOMAIN      1
 #endif
 
-#ifndef CLOG_MODULE_ID
-#define CLOG_MODULE_ID     0x00000001
+#ifndef CTLOG_MODULE_ID
+#define CTLOG_MODULE_ID     0x00000001
 #endif
 
-#ifndef CLOG_MODULE_NAME
-#define CLOG_MODULE_NAME   "os"
+#ifndef CTLOG_MODULE_NAME
+#define CTLOG_MODULE_NAME   "os"
 #endif
-
 
 typedef enum {
 	NONE=0,
@@ -37,7 +36,7 @@ typedef enum {
 	INFO=4,
 	DEBUG=5,
 	TRACE=6,
-	MAX_LOG_LEVEL,
+	MAX_LOG_LEVEL
 } log_level_e;
 
 typedef struct {
@@ -45,15 +44,20 @@ typedef struct {
 } log_sp_info_t;
 
 #define FOREACH_ID(ARGV_DEF) \
-	ARGV_DEF(CELLID)  \
-	ARGV_DEF(GNBID)   \
-	ARGV_DEF(AMFID)   \
-	ARGV_DEF(CRNTI)   \
-	ARGV_DEF(UEID)    \
-	ARGV_DEF(RBID)    \
-	ARGV_DEF(LCID)    \
-	ARGV_DEF(LCGID)   \\
-	ARGV_DEF(ERRNOID) \
+	ARGV_DEF(DBG_CELLID)   \
+	ARGV_DEF(DBG_PEERID)   \
+	ARGV_DEF(DBG_ENBID)    \
+	ARGV_DEF(DBG_MMEID)    \
+	ARGV_DEF(DBG_CRNTI)    \
+	ARGV_DEF(DBG_UEIDX)    \
+	ARGV_DEF(DBG_UEID)     \
+	ARGV_DEF(DBG_RBID)     \
+	ARGV_DEF(DBG_LCID)     \
+	ARGV_DEF(DBG_LCGID)    \
+	ARGV_DEF(DBG_TRNSID)   \
+	ARGV_DEF(DBG_INSTID)   \
+	ARGV_DEF(PLACEHOLDER)  \
+	ARGV_DEF(ERRNOID)      \
 	ARGV_DEF(MAX_IDs)
 
 #define ARGV_DEF(id)   {#id},
@@ -67,23 +71,48 @@ typedef enum {
 	FOREACH_ID(ARGV_ENUM)
 } log_sp_arg_e;
 
-typedef	log_sp_arg_e os_ctlog_sp_arg_e;
+typedef enum
+{
+	TIME_REFERENCE=0,
+	TIME_DELIMITER,
+	OS_SIGSEGV,
+}LOGID_TYPE;
 
-PRIVATE const char* g_logStr[MAX_LOG_LEVEL] = {
-   NULL, "FATAL", "ERROR", "WARN", "INFO", "DEBUG", "TRACE"
-};
+typedef	log_sp_arg_e os_ctlog_sp_arg_e;
 
 typedef unsigned int LOGID;
 extern int g_logLevel;
 extern unsigned int g_modMask;
 
+#define REGISTER_CLOG_MODULE(_module_name_, _module_id_) \
+		#undef CTLOG_MODULE_ID \
+		#define CTLOG_MODULE_ID   (_module_id_)\
+		#undef CTLOG_MODULE_NAME \
+		#define CTLOG_MODULE_NAME   (_module_name_)
+
 
 #ifdef CLOG_ENABLE_TEXT_LOGGING
 /****************************CFLOG**********************************************/
-#define FMTSTR "[%0.4d/%0.2d/%0.2d %0.2d:%0.2d:%0.2d.%0.6d][%s]%s:%d\n%s:"
-#define FMTSTR_S "[%0.4d/%0.2d/%0.2d %0.2d:%0.2d:%0.2d.%0.6d][%s]%s:%d\n%s:%s:%ld:"
+#define FMTSTR   "[%0.4d/%0.2d/%0.2d %0.2d:%0.2d:%0.2d.%0.6d][%s]%s:%s:%d %s:"
+#define FMTSTR_S "[%0.4d/%0.2d/%0.2d %0.2d:%0.2d:%0.2d.%0.6d][%s]%s:%s:%d %s:%s:%ld:"
+
+#define RLOGX(_level, _splenum, _splArg, _lstr, ...) \
+do { \
+    if (_splenum == PLACEHOLDER)\
+    { \
+        CTLOG_ARG_X(_level, _lstr, ##__VA_ARGS__);\
+    } \
+    else \
+    { \
+        CTLOG_ARG_SPX(_level, _splenum, _splArg, _lstr, ##__VA_ARGS__);\
+    } \
+} while(0);
+
+#define RLOGX_CFG(_level, _splenum, _splArg, _lstr, ...) RLOGX(_level, _splenum, _splArg, _lstr, ##__VA_ARGS__);
+
 
 #define CTLOGX(_level, _lstr, ...)                        CTLOG_ARG_X(_level, _lstr, ##__VA_ARGS__)
+#define CTLOGSPX(_level, _lstr, ...)                      CTLOG_ARG_SPX(_level, _lstr, ##__VA_ARGS__)
 
 #define CTLOG_STR(_level, _lstr, _strarg)                 CTLOG_ARG_N(S, _level, _lstr, _strarg)
 #define CTLOG_HEX(_level, _lstr, _hexdata, _hexlen)       CTLOG_ARG_N(H, _level, _lstr, _hexdata, _hexlen)
@@ -100,43 +129,52 @@ extern unsigned int g_modMask;
 
 #define CTLOG_ARG_N(_N, _level, _fmtStr, ...) \
 				do { \
-					if( _level <= g_logLevel || g_modMask & CLOG_MODULE_ID)\
+					if( _level <= g_logLevel || g_modMask & CTLOG_MODULE_ID)\
 					{ \
-						ctlog##_N(g_logStr[_level], CLOG_MODULE_NAME, __FILE__,__LINE__, FMTSTR _fmtStr "\n\n", ##__VA_ARGS__); \
+						ctlog##_N(g_logStr[_level], CTLOG_MODULE_NAME, __FILE__, __OS_FUNC__, __LINE__, FMTSTR _fmtStr "\n", ##__VA_ARGS__); \
 					} \
 				} while (0)
 
 #define CTLOG_ARG_X(_level, _fmtStr, ...) \
 				do { \
-					if( _level <= g_logLevel || g_modMask & CLOG_MODULE_ID)\
+					if( _level <= g_logLevel || g_modMask & CTLOG_MODULE_ID)\
 					{ \
-						ctlogN(_level, CLOG_MODULE_NAME, __FILE__,__LINE__, _fmtStr "\n\n", __VA_ARGS__); \
+						ctlogN(_level, CTLOG_MODULE_NAME, __FILE__, __OS_FUNC__, __LINE__, _fmtStr "\n", ##__VA_ARGS__); \
 					} \
 				} while (0)
 
 
 #define CTLOG_ARG_SP(_level, _splenum, _splArg, _fmtStr, ...) \
 				do { \
-					if( _level <= g_logLevel || g_modMask & CLOG_MODULE_ID)\
+					if( _level <= g_logLevel || g_modMask & CTLOG_MODULE_ID)\
 					{ \
-						ctlogSP(g_logStr[_level], os_log_get_domain_name(OS_LOG_DOMAIN), __FILE__,__LINE__, FMTSTR_S _fmtStr "\n\n", _splenum,_splArg, ##__VA_ARGS__); \
+						ctlogSP(g_logStr[_level], CTLOG_MODULE_NAME, __FILE__, __OS_FUNC__,__LINE__, FMTSTR_S _fmtStr "\n", _splenum,_splArg, ##__VA_ARGS__); \
 					} \
 				} while (0)
 
-void ctlog0(const char* strLogLevel, const char* modName, const char* file, int lineno, const char* fmtStr, ...);
-void ctlog1(const char* strLogLevel, const char* modName, const char* file, int lineno, const char* fmtStr, unsigned int arg1, ...);
-void ctlog2(const char* strLogLevel, const char* modName, const char* file, int lineno, const char* fmtStr, unsigned int arg1, unsigned int arg2, ...);
-void ctlog3(const char* strLogLevel, const char* modName, const char* file, int lineno, const char* fmtStr, unsigned int, unsigned int, unsigned int, ...);
-void ctlog4(const char* strLogLevel, const char* modName, const char* file, int lineno, const char* fmtStr, unsigned int, unsigned int, unsigned int, unsigned int, ...);
-void ctlogN(int logLevel, const char* modName, const char* file, int lineno, const char* fmtStr, ...);
-void ctlogSP(const char* strLogLevel, const char* modName, const char* file, int lineno, const char* fmtStr, os_ctlog_sp_arg_e splType, unsigned int splVal, unsigned int arg1, unsigned int arg2, unsigned int arg3, unsigned int arg4, ...);
-void ctlogH(const char* strLogLevel, const char* modName, const char* file, int lineno, const char* fmtStr, const char* hexdump, int hexlen, ...);
-void ctlogS(const char* strLogLevel, const char* modName, const char* file, int lineno, const char* fmtStr, const char* str, ...);
+
+#define CTLOG_ARG_SPX(_level, _splenum, _splArg, _fmtStr, ...) \
+				do { \
+					if( _level <= g_logLevel || g_modMask & CTLOG_MODULE_ID)\
+					{ \
+						ctlogSPN(_level, CTLOG_MODULE_NAME, __FILE__, __OS_FUNC__,__LINE__, _splenum, _splArg, _fmtStr "\n", ##__VA_ARGS__); \
+					} \
+				} while (0)
+
+void ctlog0(const char* strLogLevel, const char* modName, const char* file, const char* func, int lineno, const char* fmtStr, ...);
+void ctlog1(const char* strLogLevel, const char* modName, const char* file, const char* func, int lineno, const char* fmtStr, unsigned int arg1, ...);
+void ctlog2(const char* strLogLevel, const char* modName, const char* file, const char* func, int lineno, const char* fmtStr, unsigned int arg1, unsigned int arg2, ...);
+void ctlog3(const char* strLogLevel, const char* modName, const char* file, const char* func, int lineno, const char* fmtStr, unsigned int, unsigned int, unsigned int, ...);
+void ctlog4(const char* strLogLevel, const char* modName, const char* file, const char* func, int lineno, const char* fmtStr, unsigned int, unsigned int, unsigned int, unsigned int, ...);
+void ctlogSP(const char* strLogLevel, const char* modName, const char* file, const char* func, int lineno, const char* fmtStr, os_ctlog_sp_arg_e splType, unsigned int splVal, unsigned int arg1, unsigned int arg2, unsigned int arg3, unsigned int arg4, ...);
+void ctlogH(const char* strLogLevel, const char* modName, const char* file, const char* func, int lineno, const char* fmtStr, const char* hexdump, int hexlen, ...);
+void ctlogS(const char* strLogLevel, const char* modName, const char* file, const char* func, int lineno, const char* fmtStr, const char* str, ...);
+
+void ctlogN(int logLevel, const char* modName, const char* file, const char* func, int lineno, const char* fmtStr, ...);
+void ctlogSPN(int logLevel, const char* modName, const char* file, const char* func, int lineno, log_sp_arg_e splType, unsigned int splVal, const char* fmtStr, ...);
 
 #else
 /****************************CMLOG**********************************************/
-
-#define CTLOGX(_level, _lstr, ...)                        CTLOG_ARG_N(0, _level, _lstr)
 
 #define CTLOG_STR(_level, _lstr, _strarg)                 CTLOG_ARG_N(S, _level, _lstr, _strarg)
 #define CTLOG_HEX(_level, _lstr, _hexdata, _hexlen)       CTLOG_ARG_N(H, _level, _lstr, _hexdata, _hexlen)
@@ -153,7 +191,7 @@ void ctlogS(const char* strLogLevel, const char* modName, const char* file, int 
 
 #define CTLOG_ARG_N(_N, _level, _fmtStr, ...) \
 					do { \
-						if( _level <= g_logLevel || g_modMask & CLOG_MODULE_ID)\
+						if( _level <= g_logLevel || g_modMask & CTLOG_MODULE_ID)\
 						{ \
 							ctlog##_N(_LOGID, _level, ##__VA_ARGS__, __FILE__,__LINE__, _fmtStr, CLOG_MODULE_NAME); \
 						} \
@@ -161,12 +199,12 @@ void ctlogS(const char* strLogLevel, const char* modName, const char* file, int 
 
 #define CTLOG_ARG_SP(_level, _splenum, _splArg, _fmtStr, ...) \
 					do { \
-						if(_level <= g_logLevel || g_modMask & CLOG_MODULE_ID))\
+						if(_level <= g_logLevel || g_modMask & CTLOG_MODULE_ID))\
 						{ \
 							ctlogSP(_LOGID,_level,_splenum, _splArg, ##__VA_ARGS__, __FILE__,__LINE__, _fmtStr, CLOG_MODULE_NAME); \
 						} \
 					} while (0)
-
+s
 typedef log_level_e os_ctlog_level_e;
 void ctlog0(LOGID logId, os_ctlog_level_e logLevel, ...);
 void ctlog1(LOGID logId, os_ctlog_level_e logLevel, unsigned int arg1, ...);
@@ -190,13 +228,13 @@ void ctlogS(LOGID logId, os_ctlog_level_e logLevel, const char* str, ...);
 #define cdlog_show_sp(level, err_type, err, ...) cdlog_message(level, err, __VA_ARGS__);
 
 #define cdlog_message(level, err, ...) \
-    cdlog_printf(level, OS_LOG_DOMAIN, err, __FILE__, __LINE__, __OS_FUNC__, 0, __VA_ARGS__) 
+    cdlog_printf(level, CDLOG_DOMAIN, err, __FILE__, __LINE__, __OS_FUNC__, 0, __VA_ARGS__) 
 
 #define cdlog_print(level, ...) \
-    cdlog_printf(level, OS_LOG_DOMAIN, 0, NULL, 0, NULL, 1, __VA_ARGS__) 
+    cdlog_printf(level, CDLOG_DOMAIN, 0, NULL, 0, NULL, 1, __VA_ARGS__) 
 
 #define cdlog_hexdump(level, _d, _l) \
-    cdlog_hexdump_func(level, OS_LOG_DOMAIN, _d, _l)
+    cdlog_hexdump_func(level, CDLOG_DOMAIN, _d, _l)
 
 typedef log_level_e os_cdlog_level_e;
 typedef struct cdlog_s os_cdlog_t;
@@ -250,7 +288,7 @@ typedef struct cdlog_s os_cdlog_t;
 typedef struct os_cdlog_domain_s os_cdlog_domain_t;
 os_cdlog_domain_t *os_cdlog_add_domain(const char *name, os_cdlog_level_e level);
 os_cdlog_domain_t *os_cdlog_find_domain(const char *name);
-void os_cdlog_remove_domain(os_log_domain_t *domain);
+void os_cdlog_remove_domain(os_cdlog_domain_t *domain);
 void os_cdlog_set_domain_level(int id, os_cdlog_level_e level);
 os_cdlog_level_e os_cdlog_get_domain_level(int id);
 const char *os_cdlog_get_domain_name(int id);
@@ -281,7 +319,6 @@ void os_ctlog_set_circular_bufferSize(unsigned int bufSize);
 void os_ctlog_printf_config(void);
 void os_ctlog_enable_coredump(bool enable_core);
 void os_ctlog_set_fileName(const char* fileName);
-void os_ctlog_add_stderr(void);
 void os_ctlog_set_log_level(os_ctlog_level_e logLevel);
 void os_ctlog_set_module_mask(unsigned int modMask);
 void os_ctlog_init(void);

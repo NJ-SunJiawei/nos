@@ -1,9 +1,9 @@
 /************************************************************************
  *File name: os_clog_f.c
- *Description:
+ *Description: CLOG_USE_CIRCULAR_BUFFER + CLOG_USE_TTI_LOGGING  / CLOG_ENABLE_TEXT_LOGGING
  *
  *Current Version:
- *Author: Created by sjw --- 2024.02
+ *Author: Created by sjw --- 2024.02s
 ************************************************************************/
 #include "os_init.h"
 #include "private/os_clog_priv.h"
@@ -55,10 +55,10 @@ unsigned short g_prevLogOffset=0;
 PRIVATE void cl_read_cirbuf(void);
 #endif
 
-unsigned int g_rlogWriteCount = 0;
-unsigned int g_maxRlogCount   = 50;
+unsigned int g_clogWriteCount = 0;
+unsigned int g_maxClogCount   = 50;
 unsigned int g_logsDropCnt    = 0;
-cLogCntLmt g_rlLogCntLimit = CL_LOG_COUNT_LIMIT_STOP;
+cLogCntLmt   g_clLogCntLimit = CL_LOG_COUNT_LIMIT_STOP;
 
 #ifndef CLOG_ENABLE_TEXT_LOGGING
 PRIVATE volatile unsigned int g_rlogPositionIndex=0;
@@ -142,7 +142,9 @@ PRIVATE void cl_deregister_thread(void* argv)
 	os_free(argv);
 
 	/* unlock the mutex */
-	0s_thread_mutex_unlock(&g_logmutex);
+	os_thread_mutex_unlock(&g_logmutex);
+
+	os_thread_mutex_destroy(&g_logmutex);
 }
 
 PRIVATE void cl_init_specific(void)
@@ -438,7 +440,7 @@ PRIVATE void cl_flush_data(int sig)
 #ifdef CLOG_USE_CIRCULAR_BUFFER
 	cl_read_cirbuf();
 #endif
-	g_rlogWriteCount = 0;
+	g_clogWriteCount = 0;
 
 	fclose(g_fp);
 
@@ -471,25 +473,29 @@ PRIVATE void cl_catch_segViolation(int sig)
 
 	strings = (char**) backtrace_symbols(stackTraceBuf, nDepth);
 
-	for(i = 0, nStrLen=0; i < nDepth; i++)
-	{
-		sFunctions[i] = (strings[i]);
-		sFileNames[i] = "unknown file";
-
+	if(strings){
+		for(i = 0, nStrLen=0; i < nDepth; i++)
+		{
+			sFunctions[i] = (strings[i]);
+			sFileNames[i] = "unknown file";
+	
 #ifndef CLOG_ENABLE_TEXT_LOGGING
-	    ctlogS(OS_SIGSEGV, FATAL, strings[i]);
+			ctlogS(OS_SIGSEGV, FATAL, strings[i]);
 #endif
-      	printf("BT[%d] : len [%d]: %s\n",i, strlen(sFunctions[i]),strings[i]);
-		sprintf(buf+nStrLen, "   in Function %s (from %s)\n", sFunctions[i], sFileNames[i]);
-		nStrLen += strlen(sFunctions[i]) + strlen(sFileNames[i]) + 15;
-	}
-
+			printf("BT[%d] : len [%d]: %s\n",i, strlen(sFunctions[i]),strings[i]);
+			sprintf(buf+nStrLen, "	 in Function %s (from %s)\n", sFunctions[i], sFileNames[i]);
+			nStrLen += strlen(sFunctions[i]) + strlen(sFileNames[i]) + 15;
+		}
+	
 #ifdef CLOG_ENABLE_TEXT_LOGGING
-	ctlogS(g_logStr[FATAL], "RLOG", "NULL", 0, FMTSTR CLOG_SEGFAULT_STR, buf);
-	fflush(g_fp);
+		ctlogS(g_logStr[FATAL], "RLOG", "NULL", 0, FMTSTR CLOG_SEGFAULT_STR, buf);
+		fflush(g_fp);
 #else
-	ctlogS(OS_SIGSEGV, FATAL, buf);
+		ctlogS(OS_SIGSEGV, FATAL, buf);
 #endif
+
+		free(strings);
+	}
 
 	cl_flush_data(SIGSEGV);
 }
@@ -591,6 +597,13 @@ PRIVATE void cl_create_new_log_file(void)
 #endif
 }
 
+PRIVATE void ctlog_add_stderr(void)
+{
+	os_ctlog_set_fileName("stdout");
+	g_fp = stderr;
+    return;
+}
+
 void os_ctlog_set_fileSize_limit(unsigned int maxFileSize)
 {
 	g_uiMaxFileSizeLimit = (maxFileSize == 0) ? MAX_FILE_SIZE : maxFileSize*1048576;
@@ -676,13 +689,6 @@ void os_ctlog_set_fileName(const char* fileName)
 	strncpy(g_fileName, fileName, MAX_FILENAME_LEN);
 }
 
-void os_ctlog_add_stderr(void)
-{
-	os_ctlog_set_fileName("stdout");
-	g_fp = stderr;
-    return;
-}
-
 void os_ctlog_set_log_level(os_ctlog_level_e logLevel)
 {
 	g_logLevel = logLevel;
@@ -696,13 +702,12 @@ void os_ctlog_set_module_mask(unsigned int modMask)
 void os_ctlog_init(void)
 {
 	signal(SIGSEGV, cl_catch_segViolation);
-	signal(SIGBUS, cl_catch_segViolation);
-	signal(SIGINT, cl_flush_data);
+	signal(SIGBUS,  cl_catch_segViolation);
+	signal(SIGINT,  cl_flush_data);
 	/* set rate limit count for L3 Logs */
-	g_maxRlogCount = CLOG_LIMIT_L3_COUNT;
+	g_maxClogCount = CLOG_LIMIT_L3_COUNT;//CLOG_LIMIT_L2_COUNT
 
 	os_ctlog_printf_config();
-
 
 #ifndef CLOG_ENABLE_TEXT_LOGGING
 	{
@@ -731,106 +736,108 @@ void os_ctlog_init(void)
 #endif
 
 	cl_create_new_log_file();
+#endif
 }
 
 #ifdef CLOG_ENABLE_TEXT_LOGGING 
 
 #define TIME_PARAMS tm->tm_mday, tm->tm_mon+1, tm->tm_year+1900,tm->tm_hour, tm->tm_min,tm->tm_sec,usec
 
-void ctlogS(const char* strLogLevel, const char* modName, const char* file, int lineno, const char* fmtStr, const char* str, ...)
+void ctlogS(const char* strLogLevel, const char* modName, const char* file, const char* func, int lineno, const char* fmtStr, const char* str, ...)
 {
 	int usec=0;
 
 	struct tm* tm = cl_get_timestamp(&usec);
-   	if (tm) fprintf(g_fp, fmtStr, TIME_PARAMS, modName, file, lineno, strLogLevel, str);
+   	if (tm) fprintf(g_fp, fmtStr, TIME_PARAMS, modName, basename(file), func, lineno, strLogLevel, str);
 
 	CHECK_FILE_SIZE
 }
 
-void ctlogH(const char* strLogLevel, const char* modName, const char* file, int lineno, const char* fmtStr, const char* hexdump, int hexlen, ...)
+void ctlogH(const char* strLogLevel, const char* modName, const char* file, const char* func, int lineno, const char* fmtStr, const char* hexdump, int hexlen, ...)
 {
 	int usec=0;
 	char szHex[MAX_LOG_BUF_SIZE*3];
 
 	struct tm* tm = cl_get_timestamp(&usec);
 	hex_to_asii(szHex, hexdump, hexlen);
-	if (tm) fprintf(g_fp, fmtStr, TIME_PARAMS, modName, file, lineno, strLogLevel, szHex);
+	if (tm) fprintf(g_fp, fmtStr, TIME_PARAMS, modName, basename(file), func, lineno, strLogLevel, szHex);
 
 	CHECK_FILE_SIZE
 }
 
-void ctlogSP(const char* strLogLevel, const char* modName, const char* file, int lineno, const char* fmtStr, R_SPL_ARG splType,
-		unsigned int splVal, unsigned int arg1, unsigned int arg2, unsigned int arg3, unsigned int arg4, ...)
+void ctlogSP(const char* strLogLevel, const char* modName, const char* file, const char* func, int lineno, const char* fmtStr, log_sp_arg_e splType,
+				unsigned int splVal, unsigned int arg1, unsigned int arg2, unsigned int arg3, unsigned int arg4, ...)
 {
 	int usec=0;
 
 	struct tm* tm = cl_get_timestamp(&usec);
-	if (tm) fprintf(g_fp, fmtStr, TIME_PARAMS, modName, file, lineno, strLogLevel, g_splStr[splType], splVal, 
+	if (tm) fprintf(g_fp, fmtStr, TIME_PARAMS, modName, basename(file), func, lineno, strLogLevel, g_splStr[splType], splVal, 
 			arg1, arg2, arg3, arg4);
 
 	CHECK_FILE_SIZE
 }
 
-void ctlog0(const char* strLogLevel, const char* modName, const char* file, int lineno, const char* fmtStr, ...)
+
+void ctlog0(const char* strLogLevel, const char* modName, const char* file, const char* func, int lineno, const char* fmtStr, ...)
 {
 	int usec=0;
 
 	struct tm* tm = cl_get_timestamp(&usec);
-	if (tm) fprintf(g_fp, fmtStr, TIME_PARAMS, modName, file, lineno, strLogLevel);
+	if (tm) fprintf(g_fp, fmtStr, TIME_PARAMS, modName, basename(file), func, lineno, strLogLevel);
 
 	CHECK_FILE_SIZE
 }
 
-void ctlog1(const char* strLogLevel, const char* modName, const char* file, int lineno, const char* fmtStr, unsigned int arg1, ...)
+void ctlog1(const char* strLogLevel, const char* modName, const char* file, const char* func, int lineno, const char* fmtStr, unsigned int arg1, ...)
 {
 	int usec=0;
 
 	struct tm* tm = cl_get_timestamp(&usec);
-	if (tm) fprintf(g_fp, fmtStr, TIME_PARAMS, modName, file, lineno, strLogLevel, arg1);
+	if (tm) fprintf(g_fp, fmtStr, TIME_PARAMS, modName, basename(file), func, lineno, strLogLevel, arg1);
 
 	CHECK_FILE_SIZE
 }
 
-void ctlog2(const char* strLogLevel, const char* modName, const char* file, int lineno, const char* fmtStr, unsigned int arg1, unsigned int arg2, ...)
+void ctlog2(const char* strLogLevel, const char* modName, const char* file, const char* func, int lineno, const char* fmtStr, unsigned int arg1, unsigned int arg2, ...)
 {
 	int usec=0;
 
 	struct tm* tm = cl_get_timestamp(&usec);
-	if (tm) fprintf(g_fp, fmtStr, TIME_PARAMS, modName, file, lineno, strLogLevel, arg1, arg2);
+	if (tm) fprintf(g_fp, fmtStr, TIME_PARAMS, modName, basename(file), func, lineno, strLogLevel, arg1, arg2);
 
 	CHECK_FILE_SIZE
 }
 
-void ctlog3(const char* strLogLevel, const char* modName, const char* file, int lineno, const char* fmtStr, 
-		unsigned int arg1, unsigned int arg2, unsigned int arg3, ...)
+void ctlog3(const char* strLogLevel, const char* modName, const char* file, const char* func, int lineno, const char* fmtStr, 
+				unsigned int arg1, unsigned int arg2, unsigned int arg3, ...)
 {
 	int usec=0;
 
 	struct tm* tm = cl_get_timestamp(&usec);
-	if (tm) fprintf(g_fp, fmtStr, TIME_PARAMS, modName, file, lineno, strLogLevel, arg1, arg2, arg3);
+	if (tm) fprintf(g_fp, fmtStr, TIME_PARAMS, modName, basename(file), func, lineno, strLogLevel, arg1, arg2, arg3);
 
 	CHECK_FILE_SIZE
 }
 
-void ctlog4(const char* strLogLevel, const char* modName, const char* file, int lineno, const char* fmtStr, 
-		unsigned int arg1, unsigned int arg2, unsigned int arg3, unsigned int arg4, ...)
+void ctlog4(const char* strLogLevel, const char* modName, const char* file, const char* func, int lineno, const char* fmtStr, 
+				unsigned int arg1, unsigned int arg2, unsigned int arg3, unsigned int arg4, ...)
 {
 	int usec=0;
 
 	struct tm* tm = cl_get_timestamp(&usec);
-	if (tm) fprintf(g_fp, fmtStr, TIME_PARAMS, modName, file, lineno, strLogLevel, arg1, arg2, arg3, arg4);
+	if (tm) fprintf(g_fp, fmtStr, TIME_PARAMS, modName, basename(file), func, lineno, strLogLevel, arg1, arg2, arg3, arg4);
 
 	CHECK_FILE_SIZE
 }
 
-void ctlogN(int logLevel, const char* modName, const char* file, int lineno, const char* fmtStr, ...)
+void ctlogN(int logLevel, const char* modName, const char* file, const char* func, int lineno, const char* fmtStr, ...)
 {
 	va_list argList;
 	char szTime[CLOG_MAX_TIME_STAMP];
 	char szLog1[MAX_LOG_LEN], szLog2[MAX_LOG_LEN];
 
 	cl_timestamp(szTime);
-	snprintf(szLog1, MAX_LOG_LEN, "[%s][%s]%s:%d\n%s:", szTime, modName, file, lineno, g_logStr[logLevel]);
+	snprintf(szLog1, MAX_LOG_LEN, "[%s][%s]%s:%s:%d %s:", szTime, modName, basename(file), func, lineno, g_logStr[logLevel]);
 
 	va_start(argList,fmtStr);
 	vsnprintf(szLog2, MAX_LOG_LEN, fmtStr, argList);
@@ -839,7 +846,27 @@ void ctlogN(int logLevel, const char* modName, const char* file, int lineno, con
 	fprintf(g_fp, "%s%s",szLog1, szLog2);
 
 	CHECK_FILE_SIZE
+
 }
+
+void ctlogSPN(int logLevel, const char* modName, const char* file, const char* func, int lineno, log_sp_arg_e splType, unsigned int splVal, const char* fmtStr, ...)
+{
+	va_list argList;
+	char szTime[CLOG_MAX_TIME_STAMP];
+	char szLog1[MAX_LOG_LEN], szLog2[MAX_LOG_LEN];
+
+	cl_timestamp(szTime);
+    snprintf(szLog1, MAX_LOG_LEN, "[%s][%s]%s:%s:%d %s:%s:%ld:", szTime, modName, basename(file), func, lineno, g_logStr[logLevel], g_splStr[splType], splVal);
+
+    va_start(argList,fmtStr);
+    vsnprintf(szLog2, MAX_LOG_LEN, fmtStr, argList);
+    va_end(argList);
+
+    fprintf(g_fp, "%s%s",szLog1, szLog2);
+
+	CHECK_FILE_SIZE
+}
+
 #endif
 
 /* BINARY LOGGING */ 
@@ -848,11 +875,11 @@ void ctlogN(int logLevel, const char* modName, const char* file, int lineno, con
 PRIVATE void cl_save_log_data(const void* buf, unsigned short len, unsigned int g_rlogWritePosIndex)
 {
 
-   ++g_rlogWriteCount ;
+   ++g_clogWriteCount ;
 
    if((1 == g_writeCirBuf) || 
-         ((g_rlLogCntLimit == CL_LOG_COUNT_LIMIT_START) && 
-          (g_rlogWriteCount > g_maxRlogCount)) || 
+         ((g_clLogCntLimit == CL_LOG_COUNT_LIMIT_START) && 
+          (g_clogWriteCount > g_maxClogCount)) || 
          (len > CLOG_FIXED_LENGTH_BUFFER_SIZE))
    {
       g_rlogPositionIndex --;
@@ -1101,8 +1128,8 @@ void ctlog4( LOGID logId, os_ctlog_level_e logLevel, unsigned int arg1, unsigned
 //////////////////////////////////////////////////////////////////////////
 void os_ctlog_start_count_limit(void)
 {
-   g_rlogWriteCount = 0;
-   g_rlLogCntLimit = CL_LOG_COUNT_LIMIT_START;
+   g_clogWriteCount = 0;
+   g_clLogCntLimit = CL_LOG_COUNT_LIMIT_START;
    printf("Start Log Restriction\n");
 }
 
@@ -1115,7 +1142,7 @@ void os_ctlog_start_count_limit(void)
 void os_ctlog_stop_count_limit(void)
 {
    printf("Stop Log Restriction\n");
-   g_rlLogCntLimit = CL_LOG_COUNT_LIMIT_STOP;
+   g_clLogCntLimit = CL_LOG_COUNT_LIMIT_STOP;
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -1125,7 +1152,7 @@ void os_ctlog_stop_count_limit(void)
 //////////////////////////////////////////////////////////////////////////
 void os_ctlog_reset_rate_limit(void)
 {
-    g_rlogWriteCount = 0;
+    g_clogWriteCount = 0;
     g_logsDropCnt = 0;
 }
 

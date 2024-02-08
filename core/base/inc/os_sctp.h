@@ -27,9 +27,6 @@
 extern "C" {
 #endif
 
-#undef OS_LOG_DOMAIN
-#define OS_LOG_DOMAIN __os_sctp_domain
-
 #define OS_S1AP_SCTP_PORT              36412
 //#define OS_SGSAP_SCTP_PORT             29118
 #define OS_NGAP_SCTP_PORT              38412

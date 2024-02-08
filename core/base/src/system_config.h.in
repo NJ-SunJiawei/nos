@@ -86,7 +86,7 @@
 
 ////////////////config2///////////////////////////////////////
 /* Enable extra debugging. */
-#cmakedefine DEBUG @DEBUG@
+#cmakedefine OS_DEBUG @OS_DEBUG@
 
 /* Disable the embedded resampler */
 #cmakedefine DISABLE_RESAMPLE  @DISABLE_RESAMPLE@
