@@ -10,6 +10,7 @@ set(SRC_FILES
     os_time.c
     os_cdlog.c
 	os_ctlog.c
+	os_cmlog.c
     os_list.c
     os_hash.c
     os_buf.c

@@ -153,7 +153,13 @@ typedef struct {
 } THREAD_DATA;
 
 
-void hex_to_asii(char* p, const char* h, int hexlen);
+inline void hex_to_asii(char* p, const char* h, int hexlen)
+{
+	for(int i = 0; i < hexlen; i++, p+=3, h++){
+		sprintf(p, "%02x ", *h);
+	}
+}
+
 
 #ifdef __cplusplus
 }
