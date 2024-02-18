@@ -25,7 +25,7 @@ os_socknode_t *os_socknode_new(os_sockaddr_t *addr)
 
     node = os_calloc(1, sizeof(os_socknode_t));
     if (!node) {
-        os_logs(ERROR, "os_calloc() failed");
+        os_log0(ERROR, "os_calloc() failed");
         return NULL;
     }
 

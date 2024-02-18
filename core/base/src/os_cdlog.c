@@ -250,7 +250,7 @@ _API_ int os_cdlog_config_domain(const char *domain_mask, const char *level)
         if (level) {
             l = os_cdlog_level_from_string(level);
             if (l == OS_ERROR) {
-                os_log1(ERROR, "Invalid LOG-LEVEL [none:fatal|error|warn|info|debug|trace]: %s\n", level);
+                os_logs(ERROR, "Invalid LOG-LEVEL [none:fatal|error|warn|info|debug|trace]: %s\n", level);
                 return OS_ERROR;
             }
         }

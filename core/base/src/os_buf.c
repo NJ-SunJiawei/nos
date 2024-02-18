@@ -170,8 +170,8 @@ os_buf_pool_t *os_buf_pool_create(os_buf_config_t *config)
         for (i = 0; i < (pool)->size; i++) { \
             os_buf_t *buf = (pool)->index[i]; \
             if (buf) { \
-				os_log1(ERROR, ">>>SIZE[%d] is not freed", buf->len); \
-				os_logs(ERROR, "(%d)<<<", buf->len); \
+				os_logs(ERROR, ">>>(%s)", buf->file_line); \
+				os_log1(ERROR, "SIZE[%d] is not freed<<<", buf->len); \
             } \
         } \
     } \
@@ -317,8 +317,8 @@ os_buf_t *os_buf_copy_debug(os_buf_t *buf, const char *file_line)
     os_assert(buf);
     size = buf->end - buf->head;
     if (size <= 0) {
-        os_log3(ERROR, "Invalid argument[size=%d, head=%p, end=%p]",
-                size, buf->head, buf->end);
+		os_logs(ERROR, ">>>%s", file_line); \
+        os_log1(ERROR, "Invalid argument[size=%d]<<<", size);
         return NULL;
     }
 

@@ -101,7 +101,7 @@ int os_addaddrinfo(os_sockaddr_t **sa_list,
     rc = getaddrinfo(hostname, service, &hints, &ai_list);
     if (rc != 0) {
 		os_logs(ERROR, ">>>getaddrinfo(%s)", hostname);
-        os_logp0(ERROR, ERRNOID, os_socket_errno, "getaddrinfo(%d:%d:0x%x) failed<<<", family, port, flags);
+        os_logp3(ERROR, ERRNOID, os_socket_errno, "getaddrinfo(%d:%d:0x%x) failed<<<", family, port, flags);
         return OS_ERROR;
     }
 
@@ -149,7 +149,7 @@ int os_addaddrinfo(os_sockaddr_t **sa_list,
 
     if (prev == NULL) {
 		os_logs(ERROR, ">>>os_getaddrinfo(%s)", hostname);
-        os_logp0(ERROR, ERRNOID, os_socket_errno, "os_getaddrinfo(%d:%d:0x%x) failed<<<", family, port, flags);
+        os_logp3(ERROR, ERRNOID, os_socket_errno, "os_getaddrinfo(%d:%d:0x%x) failed<<<", family, port, flags);
         return OS_ERROR;
     }
 
@@ -432,7 +432,7 @@ bool os_sockaddr_is_equal(const void *p, const void *q)
             return false;
         return true;
     default:
-        os_log0(ERROR, "Unexpected address faimily %u", a->os_sa_family);
+        os_log1(ERROR, "Unexpected address faimily %u", a->os_sa_family);
         os_abort();
     }
 }

@@ -718,89 +718,89 @@ void os_ctlog_init(void)
 
 #define TIME_PARAMS tm->tm_mday, tm->tm_mon+1, tm->tm_year+1900,tm->tm_hour, tm->tm_min,tm->tm_sec,usec/1000
 
-void ctlogS(const char* strLogLevel, const char* modName, char* file, const char* func, int line, const char* fmtStr, const char* str, ...)
+void ctlogS(int logLevel, const char* modName, char* file, const char* func, int line, const char* fmtStr, const char* str, ...)
 {
 	int usec=0;
 
 	struct tm* tm = cl_get_timestamp(&usec);
-   	if (tm) fprintf(g_fp, fmtStr, TIME_PARAMS, modName, basename(file), func, line, strLogLevel, str);
+   	if (tm) fprintf(g_fp, fmtStr, TIME_PARAMS, modName, basename(file), func, line, g_logStr[logLevel], str);
 
 	CHECK_FILE_SIZE
 }
 
-void ctlogH(const char* strLogLevel, const char* modName, char* file, const char* func, int line, const char* fmtStr, const char* hexdump, int hexlen, ...)
+void ctlogH(int logLevel, const char* modName, char* file, const char* func, int line, const char* fmtStr, const char* hexdump, int hexlen, ...)
 {
 	int usec=0;
 	char szHex[MAX_LOG_BUF_SIZE*3];
 
 	struct tm* tm = cl_get_timestamp(&usec);
 	hex_to_asii(szHex, hexdump, hexlen);
-	if (tm) fprintf(g_fp, fmtStr, TIME_PARAMS, modName, basename(file), func, line, strLogLevel, szHex);
+	if (tm) fprintf(g_fp, fmtStr, TIME_PARAMS, modName, basename(file), func, line, g_logStr[logLevel], szHex);
 
 	CHECK_FILE_SIZE
 }
 
-void ctlogSP(const char* strLogLevel, const char* modName, char* file, const char* func, int line, const char* fmtStr, log_sp_arg_e splType,
+void ctlogSP(int logLevel, const char* modName, char* file, const char* func, int line, const char* fmtStr, log_sp_arg_e splType,
 				unsigned int splVal, unsigned int arg1, unsigned int arg2, unsigned int arg3, unsigned int arg4, ...)
 {
 	int usec=0;
 
 	struct tm* tm = cl_get_timestamp(&usec);
-	if (tm) fprintf(g_fp, fmtStr, TIME_PARAMS, modName, basename(file), func, line, strLogLevel, g_splStr[splType], splVal, 
+	if (tm) fprintf(g_fp, fmtStr, TIME_PARAMS, modName, basename(file), func, line, g_logStr[logLevel], g_splStr[splType], splVal, 
 			arg1, arg2, arg3, arg4);
 
 	CHECK_FILE_SIZE
 }
 
 
-void ctlog0(const char* strLogLevel, const char* modName, char* file, const char* func, int line, const char* fmtStr, ...)
+void ctlog0(int logLevel, const char* modName, char* file, const char* func, int line, const char* fmtStr, ...)
 {
 	int usec=0;
 
 	struct tm* tm = cl_get_timestamp(&usec);
-	if (tm) fprintf(g_fp, fmtStr, TIME_PARAMS, modName, basename(file), func, line, strLogLevel);
+	if (tm) fprintf(g_fp, fmtStr, TIME_PARAMS, modName, basename(file), func, line, g_logStr[logLevel]);
 
 	CHECK_FILE_SIZE
 }
 
-void ctlog1(const char* strLogLevel, const char* modName, char* file, const char* func, int line, const char* fmtStr, unsigned int arg1, ...)
+void ctlog1(int logLevel, const char* modName, char* file, const char* func, int line, const char* fmtStr, unsigned int arg1, ...)
 {
 	int usec=0;
 
 	struct tm* tm = cl_get_timestamp(&usec);
-	if (tm) fprintf(g_fp, fmtStr, TIME_PARAMS, modName, basename(file), func, line, strLogLevel, arg1);
+	if (tm) fprintf(g_fp, fmtStr, TIME_PARAMS, modName, basename(file), func, line, g_logStr[logLevel], arg1);
 
 	CHECK_FILE_SIZE
 }
 
-void ctlog2(const char* strLogLevel, const char* modName, char* file, const char* func, int line, const char* fmtStr, unsigned int arg1, unsigned int arg2, ...)
+void ctlog2(int logLevel, const char* modName, char* file, const char* func, int line, const char* fmtStr, unsigned int arg1, unsigned int arg2, ...)
 {
 	int usec=0;
 
 	struct tm* tm = cl_get_timestamp(&usec);
-	if (tm) fprintf(g_fp, fmtStr, TIME_PARAMS, modName, basename(file), func, line, strLogLevel, arg1, arg2);
+	if (tm) fprintf(g_fp, fmtStr, TIME_PARAMS, modName, basename(file), func, line, g_logStr[logLevel], arg1, arg2);
 
 	CHECK_FILE_SIZE
 }
 
-void ctlog3(const char* strLogLevel, const char* modName, char* file, const char* func, int line, const char* fmtStr, 
+void ctlog3(int logLevel, const char* modName, char* file, const char* func, int line, const char* fmtStr, 
 				unsigned int arg1, unsigned int arg2, unsigned int arg3, ...)
 {
 	int usec=0;
 
 	struct tm* tm = cl_get_timestamp(&usec);
-	if (tm) fprintf(g_fp, fmtStr, TIME_PARAMS, modName, basename(file), func, line, strLogLevel, arg1, arg2, arg3);
+	if (tm) fprintf(g_fp, fmtStr, TIME_PARAMS, modName, basename(file), func, line, g_logStr[logLevel], arg1, arg2, arg3);
 
 	CHECK_FILE_SIZE
 }
 
-void ctlog4(const char* strLogLevel, const char* modName, char* file, const char* func, int line, const char* fmtStr, 
+void ctlog4(int logLevel, const char* modName, char* file, const char* func, int line, const char* fmtStr, 
 				unsigned int arg1, unsigned int arg2, unsigned int arg3, unsigned int arg4, ...)
 {
 	int usec=0;
 
 	struct tm* tm = cl_get_timestamp(&usec);
-	if (tm) fprintf(g_fp, fmtStr, TIME_PARAMS, modName, basename(file), func, line, strLogLevel, arg1, arg2, arg3, arg4);
+	if (tm) fprintf(g_fp, fmtStr, TIME_PARAMS, modName, basename(file), func, line, g_logStr[logLevel], arg1, arg2, arg3, arg4);
 
 	CHECK_FILE_SIZE
 }

@@ -160,6 +160,7 @@ void *os_realloc_debug(void *ptr, size_t size, const char *file_line)
     size_t headroom = 0;
     os_buf_t *buf = NULL;
     os_cluster_t *cluster = NULL;
+	char point[64];
 
     if (!ptr)
         return os_malloc(size);
@@ -169,8 +170,9 @@ void *os_realloc_debug(void *ptr, size_t size, const char *file_line)
     memcpy(&buf, (unsigned char*)ptr - headroom, headroom);
 
     if (!buf) {
-        os_log2(ERROR, "Cannot get buf from ptr[%p], headroom[%d]",
-                ptr, (int)headroom);
+		sprintf((char *)point, "%p", ptr);
+		os_logs(ERROR, ">>>Cannot get buf from ptr[%s]", point);
+        os_log1(ERROR, "headroom[%d]<<<", (int)headroom);
         return NULL;
     }
 
