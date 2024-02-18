@@ -166,12 +166,12 @@ os_buf_pool_t *os_buf_pool_create(os_buf_config_t *config)
     if (((pool)->size != (pool)->avail)) { \
         int i; \
         os_logs(ERROR, ">>>%s", (pool)->name); \
-		os_log2(ERROR, "%d in '%s[%d]' were not released<<<", (pool)->size - (pool)->avail, (pool)->size); \
+		os_log2(ERROR, "%d in '[%d]' were not released<<<", (pool)->size - (pool)->avail, (pool)->size); \
         for (i = 0; i < (pool)->size; i++) { \
             os_buf_t *buf = (pool)->index[i]; \
             if (buf) { \
 				os_log1(ERROR, ">>>SIZE[%d] is not freed", buf->len); \
-				os_logs(ERROR, "(%s)<<<", buf->len); \
+				os_logs(ERROR, "(%d)<<<", buf->len); \
             } \
         } \
     } \
@@ -291,10 +291,12 @@ void os_buf_free(os_buf_t *buf)
     cluster = buf->cluster;
     os_assert(cluster);
 
-    if (OS_OBJECT_IS_REF(cluster))
-        OS_OBJECT_UNREF(cluster);
-    else
-        cluster_free(pool, buf->cluster);
+    if (OS_OBJECT_IS_REF(cluster)){
+		OS_OBJECT_UNREF(cluster);
+    }
+    else{
+    	cluster_free(pool, buf->cluster);
+	}
 
     os_pool_free(&pool->buf, buf);
 
@@ -315,7 +317,7 @@ os_buf_t *os_buf_copy_debug(os_buf_t *buf, const char *file_line)
     os_assert(buf);
     size = buf->end - buf->head;
     if (size <= 0) {
-        os_log3(ERROR, ("Invalid argument[size=%d, head=%p, end=%p]",
+        os_log3(ERROR, "Invalid argument[size=%d, head=%p, end=%p]",
                 size, buf->head, buf->end);
         return NULL;
     }

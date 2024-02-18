@@ -15,9 +15,13 @@
 #include <stdarg.h>
 #endif
 
+#if HAVE_EXECINFO_H
+#include <execinfo.h>
+#endif
+
 #include "os_init.h"
 #include <libgen.h>
-#include "private/os_cdlog_priv.h"
+#include "private/os_clog_priv.h"
 
 typedef enum {
     OS_LOG_STDERR_TYPE,
@@ -55,7 +59,7 @@ typedef struct cdlog_s {
 PRIVATE OS_POOL(cdlog_pool, os_cdlog_t);
 PRIVATE OS_LIST(cdlog_list);
 
-PRIVATE void cdlog_create_new_file(void);
+PRIVATE void cdlog_create_new_file(os_cdlog_t *cdlog);
 PRIVATE os_cdlog_t *add_cdlog(cdlog_type_e type);
 PRIVATE char *cdlog_timestamp(char *buf, char *last, int use_color);
 PRIVATE char *cdlog_domain(char *buf, char *last, const char *name, int use_color);
@@ -72,7 +76,6 @@ PRIVATE char g_fileName[MAX_FILENAME_LEN] = "os";
 PRIVATE char g_fileList[CLOG_MAX_FILES][MAX_FILENAME_LENGTH];
 PRIVATE unsigned int g_uiMaxFileSizeLimit = MAX_FILE_SIZE;
 PRIVATE unsigned char g_nMaxLogFiles = 1;
-PRIVATE int g_nCurrFileIdx = 0;
 
 typedef struct os_cdlog_domain_s {
     os_lnode_t node;
@@ -181,10 +184,10 @@ _API_ void os_cdlog_install_domain(int *domain_id, const char *name, os_cdlog_le
 
     domain = os_cdlog_find_domain(name);
     if (domain) {
-        os_cdlogs(WARN, "`%s` log-domain duplicated", name);
+        os_logs(WARN, "`%s` log-domain duplicated", name);
         if (level != domain->level) {
-            os_cdlogs(WARN, ">>>[%s]", g_logStr[domain->level]);
-	        os_cdlogs(WARN, "[%s]log-level changed<<<", g_logStr[level]);
+            os_logs(WARN, ">>>[%s]", g_logStr[domain->level]);
+	        os_logs(WARN, "[%s]log-level changed<<<", g_logStr[level]);
             os_cdlog_set_domain_level(domain->id, level);
         }
     } else {
@@ -247,14 +250,12 @@ _API_ int os_cdlog_config_domain(const char *domain_mask, const char *level)
         if (level) {
             l = os_cdlog_level_from_string(level);
             if (l == OS_ERROR) {
-                os_cdlog1(ERROR, "Invalid LOG-LEVEL "
-                        "[none:fatal|error|warn|info|debug|trace]: %s\n",
-                        level);
+                os_log1(ERROR, "Invalid LOG-LEVEL [none:fatal|error|warn|info|debug|trace]: %s\n", level);
                 return OS_ERROR;
             }
         }
 
-        os_cdlog_set_mask_level(domain_masks, l);
+        os_cdlog_set_mask_level(domain_mask, l);
     }
 
     return OS_OK;
@@ -334,15 +335,12 @@ os_cdlog_t *os_cdlog_add_stderr(void)
 
 os_cdlog_t *os_cdlog_add_file(void)
 {
-    FILE *out = NULL;
     os_cdlog_t *cdlog = NULL;
     
     cdlog = add_cdlog(OS_LOG_FILE_TYPE);
     os_assert(cdlog);
 	
 	cdlog_create_new_file(cdlog);
-
-    cdlog->file.out = out;
 
     cdlog->writer = file_writer;
 
@@ -382,7 +380,7 @@ void os_cdlog_enable_coredump(bool enable_core)
 #endif
 }
 
-PRIVATE void cdlog_timestamp(char* ts)
+PRIVATE void cdlog_file_timestamp(char* ts)
 {
     struct timeval tv;
     struct tm tm;
@@ -390,7 +388,7 @@ PRIVATE void cdlog_timestamp(char* ts)
     os_gettimeofday(&tv);
     os_localtime(tv.tv_sec, &tm);
 
-   	sprintf(ts,"%0.4d/%0.2d/%0.2d %0.2d:%0.2d:%0.2d.%0.6d", tm->tm_year+1900, tm->tm_mon+1, tm->tm_mday, tm->tm_hour, tm->tm_min,tm->tm_sec, tv.tv_usec);
+   	sprintf(ts,"%04d/%02d/%02d %02d:%02d:%02d.%03d", tm.tm_year+1900, tm.tm_mon+1, tm.tm_mday, tm.tm_hour, tm.tm_min,tm.tm_sec, (int)(tv.tv_usec/1000));
 }
 
 
@@ -403,7 +401,7 @@ PRIVATE void cdlog_create_new_file(os_cdlog_t *cdlog)
    DIR *dir = NULL;
 
    /* get current time, when file is created */
-   cdlog_timestamp(curTime); 
+   cdlog_file_timestamp(curTime); 
  
    dir  = opendir(g_logDir);
    if ( dir == NULL )
@@ -686,7 +684,7 @@ PRIVATE void file_writer(os_cdlog_t *cdlog, os_cdlog_level_e level, const char *
 
 	if(++cdlog->file.number == 200){
 		if(cdlog->file.out && ((unsigned int)(ftell(cdlog->file.out)) > g_uiMaxFileSizeLimit)) {
-			cdlog_create_new_file();
+			cdlog_create_new_file(cdlog);
 		}
 		cdlog->file.number = 0;
 	}
@@ -720,10 +718,9 @@ PRIVATE void catch_segViolation(int sig)
 	char **strings; 
     char buf[CLOG_MAX_STACK_DEPTH*128] = {0};
 
-	nDepth = backtrace(stackTraceBuf, CLOG_MAX_STACK_DEPTH);
+	nDepth = backtrace(stackTraceBuf, OS_ARRAY_SIZE(stackTraceBuf));
 
-
-	strings = (char**) backtrace_symbols(stackTraceBuf, nDepth);
+	strings = backtrace_symbols(stackTraceBuf, nDepth);
 
 	if(strings){
 		for(i = 0, nStrLen=0; i < nDepth; i++)
@@ -731,7 +728,7 @@ PRIVATE void catch_segViolation(int sig)
 			sFunctions[i] = (strings[i]);
 			sFileNames[i] = "unknown file";
 
-			printf("BT[%d] : len [%d]: %s\n",i, strlen(sFunctions[i]),strings[i]);
+			//printf("BT[%d] : len [%ld]: %s\n",i, strlen(sFunctions[i]),strings[i]);
 			sprintf(buf+nStrLen, "	 in Function %s (from %s)\n", sFunctions[i], sFileNames[i]);
 			nStrLen += strlen(sFunctions[i]) + strlen(sFileNames[i]) + 15;
 		}

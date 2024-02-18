@@ -619,7 +619,7 @@ int os_sctp_nodelay(os_sock_t *sock, int on)
 {
     os_assert(sock);
 
-	os_log0("Turn on SCTP_NODELAY");
+	os_log0(DEBUG, "Turn on SCTP_NODELAY");
     if (setsockopt(sock->fd, IPPROTO_SCTP, SCTP_NODELAY,
                 &on, sizeof(on)) != 0) {
         os_logp0(ERROR, ERRNOID, os_socket_errno, "setsockopt(IPPROTO_SCTP, SCTP_NODELAY) failed");

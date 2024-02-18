@@ -163,7 +163,7 @@ int os_bind_to_device(os_socket_t fd, const char *device)
     os_assert(fd != INVALID_SOCKET);
     os_assert(device);
 
-    os_logs(DEBUG, ("SO_BINDTODEVICE:[%s]", device);
+    os_logs(DEBUG, "SO_BINDTODEVICE:[%s]", device);
     rc = setsockopt(fd, SOL_SOCKET, SO_BINDTODEVICE, device, strlen(device)+1);
     if (rc != OS_OK) {
         int err = os_errno;

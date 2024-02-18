@@ -123,6 +123,7 @@ typedef int gid_t;
 #include <time.h>
 #include <signal.h>
 #include <errno.h>
+#include <dirent.h>
 
 #if 0
 /* for apr_pool_create and apr_pool_destroy */
@@ -499,11 +500,9 @@ PRIVATE os_inline os_uint24_t os_htobe24(os_uint24_t x)
 #define os_uint64_to_uint32(x) ((x >= 0xffffffffUL) ? 0xffffffffU : x)
 
 #define OS_OBJECT_REF(__oBJ) \
-    ((__oBJ)->reference_count)++, \
-    os_log1(DEBUG, "[REF] %d", ((__oBJ)->reference_count))
+    ((__oBJ)->reference_count)++;  os_log1(DEBUG, "[REF] %d", ((__oBJ)->reference_count))
 #define OS_OBJECT_UNREF(__oBJ) \
-	os_log1(DEBUG, "[UNREF] %d", ((__oBJ)->reference_count)), \
-    ((__oBJ)->reference_count)--
+	os_log1(DEBUG, "[UNREF] %d", ((__oBJ)->reference_count)); ((__oBJ)->reference_count)--
 #define OS_OBJECT_IS_REF(__oBJ) ((__oBJ)->reference_count > 1)
 
 #ifdef __cplusplus

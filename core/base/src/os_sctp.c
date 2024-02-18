@@ -66,7 +66,7 @@ int os_sctp_recvdata(os_sock_t *sock, void *msg, size_t len,
 						not->sn_paddr_change.spc_error);
 				break;
 			case SCTP_REMOTE_ERROR:
-				os_log3(WARN, ("SCTP_REMOTE_ERROR:[T:%d, F:0x%x, S:%d]", 
+				os_log3(WARN, "SCTP_REMOTE_ERROR:[T:%d, F:0x%x, S:%d]", 
 						not->sn_remote_error.sre_type,
 						not->sn_remote_error.sre_flags,
 						not->sn_remote_error.sre_error);

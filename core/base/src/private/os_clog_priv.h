@@ -16,7 +16,7 @@
 extern "C" {
 #endif
 
-PRIVATE const char* g_logStr[MAX_LOG_LEVEL] = { "NONE", "FATAL", "ERROR", "WARN", "INFO", "DEBUG", "TRACE", " "};
+PRIVATE const char* g_logStr[MAX_LOG_LEVEL] = { "NONE", "FATAL", "ERROR", "WARN", "INFO", "DEBUG", "TRACE"};
 
 #define CLOG_SEGFAULT_STR "Segmentation Fault Occurred\n%s"
 
@@ -38,7 +38,7 @@ PRIVATE const char* g_logStr[MAX_LOG_LEVEL] = { "NONE", "FATAL", "ERROR", "WARN"
 #define CLOG_MAX_BACKTRACE_BUFSZ	    2048
 #define CLOG_READ_POS_THRESHOLD         300
 #define CLOG_FIXED_LENGTH_BUFFER_SIZE   50
-#define CLOGTICKSCNTTOPRCLOGS         10
+#define CLOGTICKSCNTTOPRCLOGS           10
 
 /* Console handling */
 #define CLOG_CTRL_L    12

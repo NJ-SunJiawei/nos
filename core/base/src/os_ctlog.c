@@ -1,11 +1,18 @@
 /************************************************************************
  *File name: os_clog_f.c
- *Description: CLOG_USE_CIRCULAR_BUFFER + CLOG_USE_TTI_LOGGING  / CLOG_ENABLE_TEXT_LOGGING
+ *Description: CTLOG_USE_CIRCULAR_BUFFER + CTLOG_USE_TTI_LOGGING  / CTLOG_ENABLE_TEXT_LOGGING
  *
  *Current Version:
  *Author: Created by sjw --- 2024.02s
 ************************************************************************/
+#include "system_config.h"
+
+#if HAVE_EXECINFO_H
+#include <execinfo.h>
+#endif
+
 #include "os_init.h"
+#include <libgen.h>
 #include "private/os_clog_priv.h"
 
 /* Thread-specific data key visible to all threads */
@@ -27,7 +34,7 @@ unsigned int g_uiMaxFileSizeLimit = MAX_FILE_SIZE;      /* Max File Size limit f
 unsigned int g_cirMaxBufferSize = CLOG_MAX_CIRBUF_SIZE; /* Default circular buffer size 100Kb*/
 unsigned int g_nLogPort = CLOG_REMOTE_LOGGING_PORT;     /* Remote Logging port */
 unsigned char g_bRemoteLoggingDisabled = 0;             /* Remote logging flag */
-char tzname[2][CLOG_TIME_ZONE_LEN + 1] = {"CST-8", NULL};
+char tz_name[2][CLOG_TIME_ZONE_LEN + 1] = {"CST-8", ""};
 
 
 int	g_nWrites = 0;                /* number of times log function is called */
@@ -40,18 +47,17 @@ unsigned int numTtiTicks;          /* TTI Count */
 int g_kIdx, g_action, g_storeKeys; /* Console input handling parameters */
 char g_keyBuf[32];
 
-PRIVATE void cl_close_connection(int sockfd);
 PRIVATE void cl_create_new_log_file(void);
 
 
-#ifdef CLOG_USE_CIRCULAR_BUFFER
+#ifdef CTLOG_USE_CIRCULAR_BUFFER
 THREAD_DATA* g_pCirList[CLOG_MAX_THREADS]; /* List of thread data pointers */
 int g_nThreadsRegistered;          /* Number of threads registered */
 unsigned char g_writeCirBuf = 0;
 int thread_signalled;
 THREAD_DATA *g_pSingCirBuff = NULL;
 unsigned short g_prevLogOffset=0;
-int g_threadRunFg = 0;
+PRIVATE int g_threadRunFg = 1;
 
 PRIVATE void cl_read_cirbuf(void);
 #endif
@@ -61,30 +67,15 @@ unsigned int g_maxClogCount   = 50;
 unsigned int g_logsDropCnt    = 0;
 cLogCntLmt   g_clLogCntLimit = CL_LOG_COUNT_LIMIT_STOP;
 
-#ifndef CLOG_ENABLE_TEXT_LOGGING
+#ifndef CTLOG_ENABLE_TEXT_LOGGING
 PRIVATE volatile unsigned int g_rlogPositionIndex=0;
+PRIVATE void cl_close_connection(int sockfd);
 #endif
 
 
-PRIVATE void* cl_alloc(size_t mem_size)
-{
-	return os_malloc(mem_size);
-}
+#ifdef CTLOG_USE_CIRCULAR_BUFFER
 
-PRIVATE void cl_free(void* p)
-{
-	os_free(p);
-}
-
-PRIVATE void* cl_calloc(size_t mem_size)
-{
-	return os_calloc(mem_size, 1);
-}
-
-
-#ifdef CLOG_USE_CIRCULAR_BUFFER
-
-    #ifdef CLOG_USE_TTI_LOGGING
+    #ifdef CTLOG_USE_TTI_LOGGING
     #define CHECK_FILE_SIZE if( ++g_nWrites == 200 ) \
 	    { \
 		    g_nWrites = 0; \
@@ -92,11 +83,11 @@ PRIVATE void* cl_calloc(size_t mem_size)
 	    } 
     #else
     #define CHECK_FILE_SIZE
-    #endif /* CLOG_USE_TTI_LOGGING */
+    #endif /* CTLOG_USE_TTI_LOGGING */
 
-#else /* CLOG_USE_CIRCULAR_BUFFER */
+#else /* CTLOG_USE_CIRCULAR_BUFFER */
 
-	#ifdef CLOG_USE_TTI_LOGGING
+	#ifdef CTLOG_USE_TTI_LOGGING
 	#define CHECK_FILE_SIZE if( ++g_nWrites == 200 ) \
 		{ \
 			if( g_fp && ftell(g_fp) > g_uiMaxFileSizeLimit ) { \
@@ -113,11 +104,11 @@ PRIVATE void* cl_calloc(size_t mem_size)
 			}\
 			g_nWrites = 0; \
 		} 
-	#endif /* CLOG_USE_TTI_LOGGING */
-#endif /*  CLOG_USE_CIRCULAR_BUFFER */
+	#endif /* CTLOG_USE_TTI_LOGGING */
+#endif /*  CTLOG_USE_CIRCULAR_BUFFER */
 
 
-#ifdef CLOG_USE_CIRCULAR_BUFFER
+#ifdef CTLOG_USE_CIRCULAR_BUFFER
 
 #define CHECK_CIRFILE_SIZE if( g_fp && ftell(g_fp) > g_uiMaxFileSizeLimit ) \
 	{ \
@@ -176,7 +167,7 @@ PRIVATE THREAD_DATA* cl_register_thread(const char* taskName)
 	os_thread_mutex_lock(&g_logmutex);
 
 	/* Allocate circular buffer */
-	pThrData->logBuff = (unsigned char*) cl_alloc(g_cirMaxBufferSize);
+	pThrData->logBuff = (unsigned char*) os_malloc(g_cirMaxBufferSize);
 
 	if( pThrData->logBuff == NULL ) {
 		fprintf(stderr, "Failed to allocate memory [%ld] for thread %s\n",g_cirMaxBufferSize, taskName);
@@ -208,7 +199,7 @@ PRIVATE void* cl_cirbuf_read_thread(void* arg)
 
 	//fprintf(stderr, "Circular Buffer Reader thread started\n");
 
-	while(!g_threadRunFg)
+	while(g_threadRunFg)
 	{
 		/*this thread is not active and waiting to timeout */
 		thread_signalled = 0;
@@ -257,20 +248,20 @@ PRIVATE void cl_read_cirbuf(void)
    {
       THREAD_DATA* pThrData = g_pCirList[i];
 
-      if( pThrData == NULL )
+      if(pThrData == NULL)
          continue;
 
       writerPos = pThrData->logBufLen;
 
       //fprintf(stderr, "Thread [%ld] WritePos:[%ld] ReadPos:[%ld]\n", i+1, writerPos, pThrData->logReadPos);
 
-      if( pThrData->logReadPos < writerPos  )
+      if(pThrData->logReadPos < writerPos)
       {
          /* Calculate the delta data to be read from buffer */
          int dataLen = writerPos - pThrData->logReadPos;
 
          /* Write the data into file */
-         if(fwrite(pThrData->logBuff+pThrData->logReadPos,1, dataLen, g_fp) == -1 ) 
+         if(fwrite(pThrData->logBuff+pThrData->logReadPos,1, dataLen, g_fp) == -1) 
          {
             fprintf(stderr, "Failed to write data len %d\n", dataLen);
             cl_create_new_log_file();
@@ -278,7 +269,7 @@ PRIVATE void cl_read_cirbuf(void)
          }
 
          /* If post processor connected send logs */
-         if( g_nCliSocket &&  os_send(g_nCliSocket, pThrData->logBuff+pThrData->logReadPos, dataLen, 0 ) == -1 ) 
+         if(g_nCliSocket &&  os_send(g_nCliSocket, pThrData->logBuff+pThrData->logReadPos, dataLen, 0 ) == -1) 
          {
             cl_close_connection(g_nCliSocket);
             g_nCliSocket = 0;
@@ -287,13 +278,13 @@ PRIVATE void cl_read_cirbuf(void)
          /* reset log read position to last known position */
          pThrData->logReadPos = writerPos;
       }
-      else if ( pThrData->logReadPos > writerPos ) 
+      else if (pThrData->logReadPos > writerPos) 
       {
          /* Calculate the remaining data left in the buffer */
          int dataLen = g_cirMaxBufferSize -  pThrData->logReadPos;			
 
          /* Write from last know position till end */
-         if( fwrite(pThrData->logBuff+pThrData->logReadPos, 1, dataLen, g_fp) == -1 )
+         if(fwrite(pThrData->logBuff+pThrData->logReadPos, 1, dataLen, g_fp) == -1)
          {
             fprintf(stderr, "Failed to write data len %d\n", dataLen);
             cl_create_new_log_file();
@@ -301,14 +292,14 @@ PRIVATE void cl_read_cirbuf(void)
          }
 
          /* If post processor connected send logs */
-         if( g_nCliSocket &&  os_send(g_nCliSocket, pThrData->logBuff+pThrData->logReadPos, dataLen, 0 ) == -1 ) 
+         if(g_nCliSocket &&  os_send(g_nCliSocket, pThrData->logBuff+pThrData->logReadPos, dataLen, 0 ) == -1) 
          {
             cl_close_connection(g_nCliSocket);
             g_nCliSocket = 0;
          }
 
          /* Write from 0 to len position */
-         if( fwrite(pThrData->logBuff, 1, writerPos, g_fp) == -1 )
+         if(fwrite(pThrData->logBuff, 1, writerPos, g_fp) == -1)
          {
             fprintf(stderr, "Failed to write data len %d\n", dataLen);
             cl_create_new_log_file();
@@ -316,7 +307,7 @@ PRIVATE void cl_read_cirbuf(void)
          }
 
          /* If post processor connected send logs */
-         if( g_nCliSocket &&  os_send(g_nCliSocket, pThrData->logBuff, writerPos, 0 ) == -1 ) 
+         if(g_nCliSocket &&  os_send(g_nCliSocket, pThrData->logBuff, writerPos, 0 ) == -1) 
          {
             cl_close_connection(g_nCliSocket);
             g_nCliSocket = 0;
@@ -336,7 +327,7 @@ PRIVATE void cl_read_cirbuf(void)
 
 #endif
 
-#ifndef CLOG_ENABLE_TEXT_LOGGING
+#ifndef CTLOG_ENABLE_TEXT_LOGGING
 PRIVATE EndianType cl_getCPU_endian(void)
 {
     unsigned short x;
@@ -357,7 +348,7 @@ PRIVATE void cl_write_file_header(FILE* fp)
 	fileHdr.endianType = cl_getCPU_endian();
 	fileHdr.dummy32 = 2818049;
 	fileHdr.END_MARKER = 0xFFFF;
-	strncpy(fileHdr.szTimeZone, tzname[0], CLOG_TIME_ZONE_LEN);
+	strncpy(fileHdr.szTimeZone, tz_name[0], CLOG_TIME_ZONE_LEN);
    	fileHdr.time_sec = time(NULL);
 
 	if(fwrite((const void*)&fileHdr, 1, sizeof(FILE_HEADER), fp) ==  -1 )
@@ -369,30 +360,21 @@ PRIVATE void cl_write_file_header(FILE* fp)
 
 PRIVATE void* cl_log_server_thread(void* arg)
 {
-  struct sockaddr_in serv_addr;
-  struct sockaddr_in cli_addr;
-  int sockfd;
-  int newsockfd;
-  int clilen = 0;
-  int domain = AF_INET;
-  memset((void*)&serv_addr, 0, sizeof(serv_addr));
+	struct sockaddr_in serv_addr;
+	struct sockaddr_in cli_addr;
+	int sockfd;
+	int newsockfd;
+	int clilen = 0;
+	int domain = AF_INET;
+	memset((void*)&serv_addr, 0, sizeof(serv_addr));
 
+	printf("Initializing CTLOG for IPV4\n");
+	clilen = serv_addr.len = sizeof(struct sockaddr_in);
+	domain = AF_INET;
+	serv_addr.sin_family = AF_INET;
+	serv_addr.sin_addr.s_addr = INADDR_ANY;
+	serv_addr.sin_port = htons(g_nLogPort);
 
-  if(gIpType == CM_IPV4ADDR_TYPE)
-  {
-     printf("Initializing CLOG for IPV4- %ld\n",gIpType);
-     clilen = serv_addr.len = sizeof(struct sockaddr_in);
-     domain = AF_INET;
-     serv_addr.sin_family = AF_INET;
-     serv_addr.sin_addr.s_addr = INADDR_ANY;
-     serv_addr.sin_port = htons(g_nLogPort);
-  }
-  else
-  {
-     printf("NOT support CLOG for IPV6 - %ld\n",gIpType);
-	 _exit(0);
-	 
-  }
 	if( (sockfd = socket(domain, SOCK_STREAM, IPPROTO_TCP)) < 0 ) {
 		fprintf(stderr, "CLOG: Failed to create socket\n");
 		_exit(0);
@@ -438,8 +420,8 @@ PRIVATE void cl_close_connection(int sockfd)
 
 PRIVATE void cl_flush_data(int sig)
 {
-#ifdef CLOG_USE_CIRCULAR_BUFFER
-	g_threadRunFg = 1;
+#ifdef CTLOG_USE_CIRCULAR_BUFFER
+	g_threadRunFg = 0;
 	cl_read_cirbuf();
 #endif
 	g_clogWriteCount = 0;
@@ -482,16 +464,16 @@ PRIVATE void cl_catch_segViolation(int sig)
 			sFunctions[i] = (strings[i]);
 			sFileNames[i] = "unknown file";
 	
-#ifndef CLOG_ENABLE_TEXT_LOGGING
+#ifndef CTLOG_ENABLE_TEXT_LOGGING
 			ctlogS(OS_SIGSEGV, FATAL, strings[i]);
 #endif
-			printf("BT[%d] : len [%d]: %s\n",i, strlen(sFunctions[i]),strings[i]);
+			//printf("BT[%d] : len [%d]: %s\n",i, strlen(sFunctions[i]),strings[i]);
 			sprintf(buf+nStrLen, "	 in Function %s (from %s)\n", sFunctions[i], sFileNames[i]);
 			nStrLen += strlen(sFunctions[i]) + strlen(sFileNames[i]) + 15;
 		}
 	
-#ifdef CLOG_ENABLE_TEXT_LOGGING
-		ctlogS(g_logStr[FATAL], "RLOG", "NULL", 0, FMTSTR CLOG_SEGFAULT_STR, buf);
+#ifdef CTLOG_ENABLE_TEXT_LOGGING
+		os_logs(FATAL, CLOG_SEGFAULT_STR, buf);
 		fflush(g_fp);
 #else
 		ctlogS(OS_SIGSEGV, FATAL, buf);
@@ -511,7 +493,7 @@ PRIVATE void cl_timestamp(char* ts)
     os_gettimeofday(&tv);
     os_localtime(tv.tv_sec, &tm);
 
-   	sprintf(ts,"%0.4d/%0.2d/%0.2d %0.2d:%0.2d:%0.2d.%0.6d", tm->tm_year+1900, tm->tm_mon+1, tm->tm_mday, tm->tm_hour, tm->tm_min,tm->tm_sec, tv.tv_usec);
+   	sprintf(ts,"%04d/%02d/%02d %02d:%02d:%02d.%03d", tm.tm_year+1900, tm.tm_mon+1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec, (int)(tv.tv_usec/1000));
 }
 
 PRIVATE struct tm* cl_get_timestamp(int* usec)
@@ -554,7 +536,7 @@ PRIVATE void cl_create_new_log_file(void)
    if( g_fileList[g_nCurrFileIdx][0] != '\0' )
       unlink(g_fileList[g_nCurrFileIdx]);
 
-#ifdef CLOG_ENABLE_TEXT_LOGGING
+#ifdef CTLOG_ENABLE_TEXT_LOGGING
    /* create file name, Example-> dbglog_2013_08_11_15_30_00 */
    sprintf(g_fileList[g_nCurrFileIdx], "%s/%s_%s.txt",g_logDir, g_fileName, curTime );
    fp = fopen(g_fileList[g_nCurrFileIdx], "w+");
@@ -577,13 +559,13 @@ PRIVATE void cl_create_new_log_file(void)
       fprintf(stderr, "RLOG: Cannot enable Buffer IO or make file non-blocking\n");
    }
 
-#ifdef CLOG_ENABLE_TEXT_LOGGING
+#ifdef CTLOG_ENABLE_TEXT_LOGGING
    setvbuf ( fp , NULL, _IOLBF, 1024 );//line buffer
 #else
    setvbuf ( fp , NULL, _IONBF, 1024 );//no buffer
 #endif
 
-#ifndef CLOG_ENABLE_TEXT_LOGGING
+#ifndef CTLOG_ENABLE_TEXT_LOGGING
    cl_write_file_header(fp);
 #endif
 
@@ -593,19 +575,19 @@ PRIVATE void cl_create_new_log_file(void)
    if( ++g_nCurrFileIdx == g_nMaxLogFiles )
       g_nCurrFileIdx = 0;
 
-#ifndef CLOG_ENABLE_TEXT_LOGGING
-#ifdef CLOG_USE_TTI_LOGGING
+#ifndef CTLOG_ENABLE_TEXT_LOGGING
+#ifdef CTLOG_USE_TTI_LOGGING
    ctlog1(TIME_REFERENCE, NONE, (unsigned int)time(NULL));
 #endif
 #endif
 }
 
-PRIVATE void ctlog_add_stderr(void)
+/*PRIVATE void ctlog_add_stderr(void)
 {
 	os_ctlog_set_fileName("stdout");
 	g_fp = stderr;
     return;
-}
+}*/
 
 void os_ctlog_set_fileSize_limit(unsigned int maxFileSize)
 {
@@ -645,22 +627,13 @@ void os_ctlog_set_circular_bufferSize(unsigned int bufSize)
 void os_ctlog_printf_config(void)
 {
 	fprintf(stderr, "Log File:\t\t[%s]\n", g_fileName);
-
-#ifdef CLOG_ENABLE_TEXT_LOGGING
-
-    os_log_domain_t *domain, *saved_domain;
-    os_list_for_each_safe(&domain_list, saved_domain, domain){
-		fprintf(stderr, "[%s]Log level[%d]:\t\t[%s]\n",domain->name, domain->level, g_logStr[domain->level]);
-	}
-#else
 	fprintf(stderr, "Log level[%d]:\t\t[%s]\n",g_logLevel, g_logStr[g_logLevel]);
-#endif
-	fprintf(stderr, "File Size Limit:\t[%ld]\n", g_uiMaxFileSizeLimit);
+	fprintf(stderr, "File Size Limit:\t[%d]\n", g_uiMaxFileSizeLimit);
 	fprintf(stderr, "Maximum Log Files:\t[%d]\n", g_nMaxLogFiles);
-	fprintf(stderr, "Time Zone:\t\t[%s]\n", tzname[0]);
+	fprintf(stderr, "Time Zone:\t\t[%s]\n", tz_name[0]);
 
 
-#ifdef CLOG_ENABLE_TEXT_LOGGING
+#ifdef CTLOG_ENABLE_TEXT_LOGGING
 	fprintf(stderr, "Binary Logging:\t\t[Disabled]\n");
 	fprintf(stderr, "Remote Logging:\t\t[Disabled]\n");
 	fprintf(stderr, "Console Logging:\t[%s]\n", (g_fp==stderr) ? "Enabled" : "Disabled" );
@@ -669,14 +642,13 @@ void os_ctlog_printf_config(void)
 	fprintf(stderr, "Binary Logging:\t\t[Enabled]\n");
 	fprintf(stderr, "Remote Logging:\t\t[%s]\n", g_bRemoteLoggingDisabled ? "Disabled" : "Enabled");
 	fprintf(stderr, "Remote Logging Port:\t[%ld]\n", g_nLogPort);
-#ifdef CLOG_USE_CIRCULAR_BUFFER
+#ifdef CTLOG_USE_CIRCULAR_BUFFER
 	fprintf(stderr, "Circular Buffer:\t[Enabled]\n");
-	fprintf(stderr, "Circular BufferSize:\t[Actual:%ld][Derived:%ld]\n", 
-			g_cirMaxBufferSize/1024, g_cirMaxBufferSize);
+	fprintf(stderr, "Circular BufferSize:\t[Actual:%ld][Derived:%ld]\n", g_cirMaxBufferSize/1024, g_cirMaxBufferSize);
 #else
 	fprintf(stderr, "Circular Buffer:\t[Disabled]\n");
-#endif  /* CLOG_USE_CIRCULAR_BUFFER */
-#endif /* CLOG_ENABLE_TEXT_LOGGING */
+#endif  /* CTLOG_USE_CIRCULAR_BUFFER */
+#endif /* CTLOG_ENABLE_TEXT_LOGGING */
 
 }
 
@@ -714,135 +686,133 @@ void os_ctlog_init(void)
 
 	os_ctlog_printf_config();
 
-#ifndef CLOG_ENABLE_TEXT_LOGGING
+#ifndef CTLOG_ENABLE_TEXT_LOGGING
 	{
 		os_thread_id_t tid;
-		if(pthread_create(&tid, NULL, &cl_log_server_thread, NULL) != 0 ) {
+		if(pthread_create(&tid, NULL, cl_log_server_thread, NULL) != 0 ) {
 			fprintf(stderr, "Failed to initialize log server thread\n");
 			_exit(0);
 		}
 	}
 
-#ifdef CLOG_USE_CIRCULAR_BUFFER
+#ifdef CTLOG_USE_CIRCULAR_BUFFER
 	{
 		cl_init_specific();
 
 		os_thread_id_t tid;
 		os_thread_mutex_init(&g_logmutex, NULL);
-		if( pthread_create(&tid, NULL, &cl_cirbuf_read_thread, NULL) != 0 ) {
+		if( pthread_create(&tid, NULL, cl_cirbuf_read_thread, NULL) != 0 ) {
 			fprintf(stderr, "Failed to initialize log server thread\n");
 			_exit(0);
 		}
 		/* Initialize single circular buffer for all threads */
 		g_pSingCirBuff = cl_register_thread("DUMMY");
 	}
-
 #endif
 #endif
 
 	cl_create_new_log_file();
-#endif
 }
 
-#ifdef CLOG_ENABLE_TEXT_LOGGING 
+#ifdef CTLOG_ENABLE_TEXT_LOGGING 
 
-#define TIME_PARAMS tm->tm_mday, tm->tm_mon+1, tm->tm_year+1900,tm->tm_hour, tm->tm_min,tm->tm_sec,usec
+#define TIME_PARAMS tm->tm_mday, tm->tm_mon+1, tm->tm_year+1900,tm->tm_hour, tm->tm_min,tm->tm_sec,usec/1000
 
-void ctlogS(const char* strLogLevel, const char* modName, const char* file, const char* func, int lineno, const char* fmtStr, const char* str, ...)
+void ctlogS(const char* strLogLevel, const char* modName, char* file, const char* func, int line, const char* fmtStr, const char* str, ...)
 {
 	int usec=0;
 
 	struct tm* tm = cl_get_timestamp(&usec);
-   	if (tm) fprintf(g_fp, fmtStr, TIME_PARAMS, modName, basename(file), func, lineno, strLogLevel, str);
+   	if (tm) fprintf(g_fp, fmtStr, TIME_PARAMS, modName, basename(file), func, line, strLogLevel, str);
 
 	CHECK_FILE_SIZE
 }
 
-void ctlogH(const char* strLogLevel, const char* modName, const char* file, const char* func, int lineno, const char* fmtStr, const char* hexdump, int hexlen, ...)
+void ctlogH(const char* strLogLevel, const char* modName, char* file, const char* func, int line, const char* fmtStr, const char* hexdump, int hexlen, ...)
 {
 	int usec=0;
 	char szHex[MAX_LOG_BUF_SIZE*3];
 
 	struct tm* tm = cl_get_timestamp(&usec);
 	hex_to_asii(szHex, hexdump, hexlen);
-	if (tm) fprintf(g_fp, fmtStr, TIME_PARAMS, modName, basename(file), func, lineno, strLogLevel, szHex);
+	if (tm) fprintf(g_fp, fmtStr, TIME_PARAMS, modName, basename(file), func, line, strLogLevel, szHex);
 
 	CHECK_FILE_SIZE
 }
 
-void ctlogSP(const char* strLogLevel, const char* modName, const char* file, const char* func, int lineno, const char* fmtStr, log_sp_arg_e splType,
+void ctlogSP(const char* strLogLevel, const char* modName, char* file, const char* func, int line, const char* fmtStr, log_sp_arg_e splType,
 				unsigned int splVal, unsigned int arg1, unsigned int arg2, unsigned int arg3, unsigned int arg4, ...)
 {
 	int usec=0;
 
 	struct tm* tm = cl_get_timestamp(&usec);
-	if (tm) fprintf(g_fp, fmtStr, TIME_PARAMS, modName, basename(file), func, lineno, strLogLevel, g_splStr[splType], splVal, 
+	if (tm) fprintf(g_fp, fmtStr, TIME_PARAMS, modName, basename(file), func, line, strLogLevel, g_splStr[splType], splVal, 
 			arg1, arg2, arg3, arg4);
 
 	CHECK_FILE_SIZE
 }
 
 
-void ctlog0(const char* strLogLevel, const char* modName, const char* file, const char* func, int lineno, const char* fmtStr, ...)
+void ctlog0(const char* strLogLevel, const char* modName, char* file, const char* func, int line, const char* fmtStr, ...)
 {
 	int usec=0;
 
 	struct tm* tm = cl_get_timestamp(&usec);
-	if (tm) fprintf(g_fp, fmtStr, TIME_PARAMS, modName, basename(file), func, lineno, strLogLevel);
+	if (tm) fprintf(g_fp, fmtStr, TIME_PARAMS, modName, basename(file), func, line, strLogLevel);
 
 	CHECK_FILE_SIZE
 }
 
-void ctlog1(const char* strLogLevel, const char* modName, const char* file, const char* func, int lineno, const char* fmtStr, unsigned int arg1, ...)
+void ctlog1(const char* strLogLevel, const char* modName, char* file, const char* func, int line, const char* fmtStr, unsigned int arg1, ...)
 {
 	int usec=0;
 
 	struct tm* tm = cl_get_timestamp(&usec);
-	if (tm) fprintf(g_fp, fmtStr, TIME_PARAMS, modName, basename(file), func, lineno, strLogLevel, arg1);
+	if (tm) fprintf(g_fp, fmtStr, TIME_PARAMS, modName, basename(file), func, line, strLogLevel, arg1);
 
 	CHECK_FILE_SIZE
 }
 
-void ctlog2(const char* strLogLevel, const char* modName, const char* file, const char* func, int lineno, const char* fmtStr, unsigned int arg1, unsigned int arg2, ...)
+void ctlog2(const char* strLogLevel, const char* modName, char* file, const char* func, int line, const char* fmtStr, unsigned int arg1, unsigned int arg2, ...)
 {
 	int usec=0;
 
 	struct tm* tm = cl_get_timestamp(&usec);
-	if (tm) fprintf(g_fp, fmtStr, TIME_PARAMS, modName, basename(file), func, lineno, strLogLevel, arg1, arg2);
+	if (tm) fprintf(g_fp, fmtStr, TIME_PARAMS, modName, basename(file), func, line, strLogLevel, arg1, arg2);
 
 	CHECK_FILE_SIZE
 }
 
-void ctlog3(const char* strLogLevel, const char* modName, const char* file, const char* func, int lineno, const char* fmtStr, 
+void ctlog3(const char* strLogLevel, const char* modName, char* file, const char* func, int line, const char* fmtStr, 
 				unsigned int arg1, unsigned int arg2, unsigned int arg3, ...)
 {
 	int usec=0;
 
 	struct tm* tm = cl_get_timestamp(&usec);
-	if (tm) fprintf(g_fp, fmtStr, TIME_PARAMS, modName, basename(file), func, lineno, strLogLevel, arg1, arg2, arg3);
+	if (tm) fprintf(g_fp, fmtStr, TIME_PARAMS, modName, basename(file), func, line, strLogLevel, arg1, arg2, arg3);
 
 	CHECK_FILE_SIZE
 }
 
-void ctlog4(const char* strLogLevel, const char* modName, const char* file, const char* func, int lineno, const char* fmtStr, 
+void ctlog4(const char* strLogLevel, const char* modName, char* file, const char* func, int line, const char* fmtStr, 
 				unsigned int arg1, unsigned int arg2, unsigned int arg3, unsigned int arg4, ...)
 {
 	int usec=0;
 
 	struct tm* tm = cl_get_timestamp(&usec);
-	if (tm) fprintf(g_fp, fmtStr, TIME_PARAMS, modName, basename(file), func, lineno, strLogLevel, arg1, arg2, arg3, arg4);
+	if (tm) fprintf(g_fp, fmtStr, TIME_PARAMS, modName, basename(file), func, line, strLogLevel, arg1, arg2, arg3, arg4);
 
 	CHECK_FILE_SIZE
 }
 
-void ctlogN(int logLevel, const char* modName, const char* file, const char* func, int lineno, const char* fmtStr, ...)
+void ctlogN(int logLevel, const char* modName, char* file, const char* func, int line, const char* fmtStr, ...)
 {
 	va_list argList;
 	char szTime[CLOG_MAX_TIME_STAMP];
 	char szLog1[MAX_LOG_LEN], szLog2[MAX_LOG_LEN];
 
 	cl_timestamp(szTime);
-	snprintf(szLog1, MAX_LOG_LEN, "[%s][%s]%s:%s:%d %s:", szTime, modName, basename(file), func, lineno, g_logStr[logLevel]);
+	snprintf(szLog1, MAX_LOG_LEN, "[%s][%s]%s:%s:%d %s:", szTime, modName, basename(file), func, line, g_logStr[logLevel]);
 
 	va_start(argList,fmtStr);
 	vsnprintf(szLog2, MAX_LOG_LEN, fmtStr, argList);
@@ -854,14 +824,14 @@ void ctlogN(int logLevel, const char* modName, const char* file, const char* fun
 
 }
 
-void ctlogSPN(int logLevel, const char* modName, const char* file, const char* func, int lineno, log_sp_arg_e splType, unsigned int splVal, const char* fmtStr, ...)
+void ctlogSPN(int logLevel, const char* modName, char* file, const char* func, int line, log_sp_arg_e splType, unsigned int splVal, const char* fmtStr, ...)
 {
 	va_list argList;
 	char szTime[CLOG_MAX_TIME_STAMP];
 	char szLog1[MAX_LOG_LEN], szLog2[MAX_LOG_LEN];
 
 	cl_timestamp(szTime);
-    snprintf(szLog1, MAX_LOG_LEN, "[%s][%s]%s:%s:%d %s:%s:%ld:", szTime, modName, basename(file), func, lineno, g_logStr[logLevel], g_splStr[splType], splVal);
+    snprintf(szLog1, MAX_LOG_LEN, "[%s][%s]%s:%s:%d %s:%s:%d:", szTime, modName, basename(file), func, line, g_logStr[logLevel], g_splStr[splType].name, splVal);
 
     va_start(argList,fmtStr);
     vsnprintf(szLog2, MAX_LOG_LEN, fmtStr, argList);
@@ -875,11 +845,10 @@ void ctlogSPN(int logLevel, const char* modName, const char* file, const char* f
 #endif
 
 /* BINARY LOGGING */ 
-#ifndef  CLOG_ENABLE_TEXT_LOGGING
+#ifndef  CTLOG_ENABLE_TEXT_LOGGING
 #define CLOG_SAVE_TIME(_logTime) _logTime.ms_tti=numTtiTicks;
 PRIVATE void cl_save_log_data(const void* buf, unsigned short len, unsigned int g_rlogWritePosIndex)
 {
-
    ++g_clogWriteCount ;
 
    if((1 == g_writeCirBuf) || 
@@ -892,12 +861,12 @@ PRIVATE void cl_save_log_data(const void* buf, unsigned short len, unsigned int 
       return;
    }
 
-#ifdef CLOG_USE_CIRCULAR_BUFFER
+#ifdef CTLOG_USE_CIRCULAR_BUFFER
    unsigned int logWritePointerPosition;
    THREAD_DATA* p = (THREAD_DATA*) g_pSingCirBuff;
 
    /* if buffer is about to full, write till end and continue writing from begining */
-   if( ((g_rlogWritePosIndex+1) * CLOG_FIXED_LENGTH_BUFFER_SIZE) > g_cirMaxBufferSize ) 
+   if(((g_rlogWritePosIndex+1) * CLOG_FIXED_LENGTH_BUFFER_SIZE) > g_cirMaxBufferSize) 
    {
       /* setting this flag to 1 to avoid other threads
          to write in same circular buffer */
@@ -906,13 +875,13 @@ PRIVATE void cl_save_log_data(const void* buf, unsigned short len, unsigned int 
       g_rlogPositionIndex = 0;
 
       /* if reader has not read initial data, minmum buffer size should be 100Kb */
-      if( p->logReadPos < CLOG_READ_POS_THRESHOLD && !thread_signalled ) {
+      if(p->logReadPos < CLOG_READ_POS_THRESHOLD && !thread_signalled) {
          pthread_cond_signal(&g_cond); /* this will wakeup thread */
       }
 
       /* we are unlikely to hit this condition, but to prevent corruption of binary logs */
       /* we cannot write the data, if we write, data will be corrected forever */
-      if( CLOG_FIXED_LENGTH_BUFFER_SIZE > p->logReadPos ) {
+      if(p->logReadPos < CLOG_FIXED_LENGTH_BUFFER_SIZE) {
          fprintf(stderr, "cannot write data.retune buffer parameters\n");
          return;
       }
@@ -930,7 +899,7 @@ PRIVATE void cl_save_log_data(const void* buf, unsigned short len, unsigned int 
    {
       /* if reader is far behind and writer is reaching reader position, diff < 5Kb */
       /* its time to wakeup thread if reader has not read much of data */
-      if( p->logReadPos > p->logBufLen && (p->logReadPos - p->logBufLen) < CLOG_READ_POS_THRESHOLD ) 
+      if(p->logReadPos > p->logBufLen && (p->logReadPos - p->logBufLen) < CLOG_READ_POS_THRESHOLD) 
          pthread_cond_signal(&g_cond); /* this will wakeup thread */
 
       logWritePointerPosition = (g_rlogWritePosIndex * CLOG_FIXED_LENGTH_BUFFER_SIZE) + g_prevLogOffset;
@@ -938,14 +907,14 @@ PRIVATE void cl_save_log_data(const void* buf, unsigned short len, unsigned int 
       memcpy(p->logBuff+logWritePointerPosition, buf, len);
       p->logBufLen += CLOG_FIXED_LENGTH_BUFFER_SIZE;
    }
-#else /* !CLOG_USE_CIRCULAR_BUFFER */
-   if(fwrite((const void*)buf, 1, CLOG_FIXED_LENGTH_BUFFER_SIZE, g_fp) == -1 ) 
+#else /* !CTLOG_USE_CIRCULAR_BUFFER */
+   if(fwrite((const void*)buf, 1, CLOG_FIXED_LENGTH_BUFFER_SIZE, g_fp) == -1) 
    {
       fprintf(stderr, "Failed to write log data in file\n");
       perror("LOG");
       cl_create_new_log_file();
    }
-#endif /* CLOG_USE_CIRCULAR_BUFFER */
+#endif /* CTLOG_USE_CIRCULAR_BUFFER */
 
    CHECK_FILE_SIZE
 

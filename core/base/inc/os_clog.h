@@ -79,22 +79,16 @@ typedef enum
 }LOGID_TYPE;
 
 typedef	log_sp_arg_e os_ctlog_sp_arg_e;
+typedef log_level_e os_ctlog_level_e;
 
 typedef unsigned int LOGID;
 extern int g_logLevel;
 extern unsigned int g_modMask;
 
-#define REGISTER_CLOG_MODULE(_module_name_, _module_id_) \
-		#undef CTLOG_MODULE_ID \
-		#define CTLOG_MODULE_ID   (_module_id_)\
-		#undef CTLOG_MODULE_NAME \
-		#define CTLOG_MODULE_NAME   (_module_name_)
-
-
-#ifdef CLOG_ENABLE_TEXT_LOGGING
+#ifdef CTLOG_ENABLE_TEXT_LOGGING
 /****************************CFLOG**********************************************/
-#define FMTSTR   "[%0.4d/%0.2d/%0.2d %0.2d:%0.2d:%0.2d.%0.6d][%s]%s:%s:%d %s:"
-#define FMTSTR_S "[%0.4d/%0.2d/%0.2d %0.2d:%0.2d:%0.2d.%0.6d][%s]%s:%s:%d %s:%s:%ld:"
+#define FMTSTR   "[%04d/%02d/%02d %02d:%02d:%02d.%03d][%s]%s:%s:%d %s:"
+#define FMTSTR_S "[%04d/%02d/%02d %02d:%02d:%02d.%03d][%s]%s:%s:%d %s:%s:%ld:"
 
 #define RLOGX(_level, _splenum, _splArg, _lstr, ...) \
 do { \
@@ -161,17 +155,17 @@ do { \
 					} \
 				} while (0)
 
-void ctlog0(const char* strLogLevel, const char* modName, const char* file, const char* func, int lineno, const char* fmtStr, ...);
-void ctlog1(const char* strLogLevel, const char* modName, const char* file, const char* func, int lineno, const char* fmtStr, unsigned int arg1, ...);
-void ctlog2(const char* strLogLevel, const char* modName, const char* file, const char* func, int lineno, const char* fmtStr, unsigned int arg1, unsigned int arg2, ...);
-void ctlog3(const char* strLogLevel, const char* modName, const char* file, const char* func, int lineno, const char* fmtStr, unsigned int, unsigned int, unsigned int, ...);
-void ctlog4(const char* strLogLevel, const char* modName, const char* file, const char* func, int lineno, const char* fmtStr, unsigned int, unsigned int, unsigned int, unsigned int, ...);
-void ctlogSP(const char* strLogLevel, const char* modName, const char* file, const char* func, int lineno, const char* fmtStr, os_ctlog_sp_arg_e splType, unsigned int splVal, unsigned int arg1, unsigned int arg2, unsigned int arg3, unsigned int arg4, ...);
-void ctlogH(const char* strLogLevel, const char* modName, const char* file, const char* func, int lineno, const char* fmtStr, const char* hexdump, int hexlen, ...);
-void ctlogS(const char* strLogLevel, const char* modName, const char* file, const char* func, int lineno, const char* fmtStr, const char* str, ...);
+void ctlog0(const char* strLogLevel, const char* modName, char* file, const char* func, int line, const char* fmtStr, ...);
+void ctlog1(const char* strLogLevel, const char* modName, char* file, const char* func, int line, const char* fmtStr, unsigned int arg1, ...);
+void ctlog2(const char* strLogLevel, const char* modName, char* file, const char* func, int line, const char* fmtStr, unsigned int arg1, unsigned int arg2, ...);
+void ctlog3(const char* strLogLevel, const char* modName, char* file, const char* func, int line, const char* fmtStr, unsigned int, unsigned int, unsigned int, ...);
+void ctlog4(const char* strLogLevel, const char* modName, char* file, const char* func, int line, const char* fmtStr, unsigned int, unsigned int, unsigned int, unsigned int, ...);
+void ctlogSP(const char* strLogLevel, const char* modName, char* file, const char* func, int line, const char* fmtStr, os_ctlog_sp_arg_e splType, unsigned int splVal, unsigned int arg1, unsigned int arg2, unsigned int arg3, unsigned int arg4, ...);
+void ctlogH(const char* strLogLevel, const char* modName, char* file, const char* func, int line, const char* fmtStr, const char* hexdump, int hexlen, ...);
+void ctlogS(const char* strLogLevel, const char* modName, char* file, const char* func, int line, const char* fmtStr, const char* str, ...);
 
-void ctlogN(int logLevel, const char* modName, const char* file, const char* func, int lineno, const char* fmtStr, ...);
-void ctlogSPN(int logLevel, const char* modName, const char* file, const char* func, int lineno, log_sp_arg_e splType, unsigned int splVal, const char* fmtStr, ...);
+void ctlogN(int logLevel, const char* modName, char* file, const char* func, int line, const char* fmtStr, ...);
+void ctlogSPN(int logLevel, const char* modName, char* file, const char* func, int line, log_sp_arg_e splType, unsigned int splVal, const char* fmtStr, ...);
 
 #else
 /****************************CMLOG**********************************************/
@@ -204,8 +198,7 @@ void ctlogSPN(int logLevel, const char* modName, const char* file, const char* f
 							ctlogSP(_LOGID,_level,_splenum, _splArg, ##__VA_ARGS__, __FILE__,__LINE__, _fmtStr, CLOG_MODULE_NAME); \
 						} \
 					} while (0)
-s
-typedef log_level_e os_ctlog_level_e;
+
 void ctlog0(LOGID logId, os_ctlog_level_e logLevel, ...);
 void ctlog1(LOGID logId, os_ctlog_level_e logLevel, unsigned int arg1, ...);
 void ctlog2(LOGID logId, os_ctlog_level_e logLevel, unsigned int arg1, unsigned int arg2, ...);
