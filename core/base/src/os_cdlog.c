@@ -1,6 +1,6 @@
 /************************************************************************
  *File name: cdlog.c
- *Description:
+ *Description: Single threaded use
  *
  *Current Version:
  *Author: Created by sjw --- 2024.01
@@ -185,10 +185,9 @@ _API_ void os_cdlog_install_domain(int *domain_id, const char *name, os_cdlog_le
 
     domain = os_cdlog_find_domain(name);
     if (domain) {
-        os_logs(WARN, "`%s` log-domain duplicated", name);
+        os_log(WARN, "`%s` log-domain duplicated", name);
         if (level != domain->level) {
-            os_logs(WARN, ">>>[%s]", g_logStr[domain->level]);
-	        os_logs(WARN, "[%s]log-level changed<<<", g_logStr[level]);
+	        os_log(WARN, "[%s]->[%s] log-level changed", g_logStr[domain->level], g_logStr[level]);
             os_cdlog_set_domain_level(domain->id, level);
         }
     } else {
@@ -251,7 +250,7 @@ _API_ int os_cdlog_config_domain(const char *domain_mask, const char *level)
         if (level) {
             l = os_cdlog_level_from_string(level);
             if (l == OS_ERROR) {
-                os_logs(ERROR, "Invalid LOG-LEVEL [none:fatal|error|warn|info|debug|trace]: %s\n", level);
+                os_log(ERROR, "Invalid LOG-LEVEL [none:fatal|error|warn|info|debug|trace]: %s\n", level);
                 return OS_ERROR;
             }
         }
@@ -434,7 +433,7 @@ void cdlog_vprintf(os_cdlog_level_e level, int id, os_err_t err, const char *fil
     char cdlogstr[OS_HUGE_LEN];
     char *p, *last;
 
-    //int wrote_stderr = 0;
+    int wrote_stderr = 0;
 
     os_list_for_each(&cdlog_list, cdlog) {
         domain = os_pool_find(&domain_pool, id);
@@ -476,11 +475,11 @@ void cdlog_vprintf(os_cdlog_level_e level, int id, os_err_t err, const char *fil
 		
         cdlog->writer(cdlog, level, cdlogstr);
         
-        //if (cdlog->type == OS_LOG_STDERR_TYPE)
-        //    wrote_stderr = 1;
+        if (cdlog->type == OS_LOG_STDERR_TYPE)
+            wrote_stderr = 1;
     }
 
-    /*if (!wrote_stderr)
+    if (!wrote_stderr)
     {
         int use_color = 0;
 #if !defined(_WIN32)
@@ -503,7 +502,7 @@ void cdlog_vprintf(os_cdlog_level_e level, int id, os_err_t err, const char *fil
 
         fprintf(stderr, "%s", cdlogstr);
         fflush(stderr);
-    }*/
+    }
 }
 
 void cdlog_printf(os_cdlog_level_e level, int id, os_err_t err, char *file, int line, const char *func, int content_only, const char *format, ...)

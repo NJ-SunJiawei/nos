@@ -27,44 +27,17 @@ extern "C" {
 #define OS_MAX_PKT_LEN                 2048
 /***************log**********************/
 #if defined(OS_USE_CDLOG)
-#define os_logs    cdlog_show
-#define os_logh    cdlog_show
-#define os_log0    cdlog_show
-#define os_log1    cdlog_show
-#define os_log2    cdlog_show
-#define os_log3    cdlog_show
-#define os_log4    cdlog_show
-#define os_logp0   cdlog_show_sp
-#define os_logp1   cdlog_show_sp
-#define os_logp2   cdlog_show_sp
-#define os_logp3   cdlog_show_sp
-#define os_logp4   cdlog_show_sp
+#define os_log     cdlog_show
+#define os_logsp   cdlog_show_sp
+#define os_logh    cdlog_hexdump
 #elif defined(OS_USE_CTLOG)
-#define os_logs    CTLOG_STR
-#define os_logh    CTLOG_HEX
-#define os_log0    CTLOG0
-#define os_log1    CTLOG1
-#define os_log2    CTLOG2
-#define os_log3    CTLOG3
-#define os_log4    CTLOG4
-#define os_logp0   CTLOG_SP0
-#define os_logp1   CTLOG_SP1
-#define os_logp2   CTLOG_SP2
-#define os_logp3   CTLOG_SP3
-#define os_logp4   CTLOG_SP4
+#define os_log     CTLOGX
+#define os_logsp   CTLOGSPX
+#define os_logh    CTLOGH
 #elif defined(OS_USE_CMLOG)
-#define os_logs    CMLOG_STR
-#define os_logh    CMLOG_HEX
-#define os_log0    CMLOG0
-#define os_log1    CMLOG1
-#define os_log2    CMLOG2
-#define os_log3    CMLOG3
-#define os_log4    CMLOG4
-#define os_logp0   CMLOG_SP0
-#define os_logp1   CMLOG_SP1
-#define os_logp2   CMLOG_SP2
-#define os_logp3   CMLOG_SP3
-#define os_logp4   CMLOG_SP4
+#define os_log     CMLOGX
+#define os_logsp   CMLOGSPX
+#define os_logh    CMLOGH
 #endif
 /****************************************/
 /***************declaration**************/

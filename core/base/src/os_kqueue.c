@@ -197,7 +197,7 @@ PRIVATE int kqueue_process(os_pollset_t *pollset, os_time_t timeout)
     context->nchanges = 0;
 
     if (n < 0) {
-        os_logp0(ERROR, ERRNOID, os_socket_errno, "kqueue failed");
+        os_logsp(ERROR, ERRNOID, os_socket_errno, "kqueue failed");
         return OS_ERROR;
     } else if (n == 0) {
         return OS_TIMEUP;
@@ -267,7 +267,7 @@ PRIVATE int kqueue_process(os_pollset_t *pollset, os_time_t timeout)
 
             /* Other errors shouldn't occur. */
             default:
-                os_log2(ERROR, "kevent() error : flags = 0x%x, errno = %d",
+                os_log(ERROR, "kevent() error : flags = 0x%x, errno = %d",
                         context->event_list[i].flags,
                         (int)context->event_list[i].data);
                 return OS_ERROR;
@@ -279,7 +279,7 @@ PRIVATE int kqueue_process(os_pollset_t *pollset, os_time_t timeout)
         } else if (context->event_list[i].filter == EVFILT_USER) {
             /* Nothing */
         } else {
-            os_log1(WARN, "kevent() unknown filter = 0x%x\n",
+            os_log(WARN, "kevent() unknown filter = 0x%x\n",
                 context->event_list[i].filter);
         }
 
@@ -339,7 +339,7 @@ PRIVATE int kqueue_notify_pollset(os_pollset_t *pollset)
 
     rc = kevent(context->kqueue, &kev, 1, NULL, 0, &timeout);
     if (rc == -1) {
-        os_log0(WARN,"kevent() failed");
+        os_log(WARN,"kevent() failed");
         return OS_ERROR;
     }
 

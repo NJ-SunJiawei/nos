@@ -101,7 +101,7 @@ PRIVATE int epoll_add(os_poll_t *poll)
     if (!map) {
         map = os_calloc(1, sizeof(*map));
         if (!map) {
-            os_log0(ERROR, "os_calloc() failed");
+            os_log(ERROR, "os_calloc() failed");
             return OS_ERROR;
         }
 
@@ -127,7 +127,7 @@ PRIVATE int epoll_add(os_poll_t *poll)
 
     rv = epoll_ctl(context->epfd, op, poll->fd, &ee);
     if (rv < 0) {
-        os_logp1(ERROR, ERRNOID, os_socket_errno, "epoll_ctl[%d] failed", op);
+        os_logsp(ERROR, ERRNOID, os_socket_errno, "epoll_ctl[%d] failed", op);
         return OS_ERROR;
     }
 
@@ -177,7 +177,7 @@ PRIVATE int epoll_remove(os_poll_t *poll)
 
     rv = epoll_ctl(context->epfd, op, poll->fd, &ee);
     if (rv < 0) {
-        os_logp1(ERROR, ERRNOID, os_socket_errno, "epoll_remove[%d] failed", op);
+        os_logsp(ERROR, ERRNOID, os_socket_errno, "epoll_remove[%d] failed", op);
         return OS_ERROR;
     }
 
@@ -199,7 +199,7 @@ PRIVATE int epoll_process(os_pollset_t *pollset, os_time_t timeout)
             timeout == OS_INFINITE_TIME ? OS_INFINITE_TIME :
                 os_time_to_msec(timeout));
     if (num_of_poll < 0) {
-        os_logp0(ERROR, ERRNOID, os_socket_errno, "epoll failed");
+        os_logsp(ERROR, ERRNOID, os_socket_errno, "epoll failed");
         return OS_ERROR;
     } else if (num_of_poll == 0) {
         return OS_TIMEUP;

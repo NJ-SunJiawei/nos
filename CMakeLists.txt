@@ -26,7 +26,7 @@ OPTION(SWIG_ON "SWIG depends" OFF)
 ##############################################################
 
 ##############################################################
-OPTION(TOOLCHAIN_ON "toolchain depends" ON) #交叉编译
+OPTION(TOOLCHAIN_ON "toolchain depends" OFF) #交叉编译
 ##############################################################
 
 ###################
@@ -170,7 +170,7 @@ include_directories(${OS_CORE_BSAE_PATH}/inc)
 #sub path
 ###################
 add_subdirectory(${OS_CORE_BSAE_PATH}/src)
-
+add_subdirectory(${OS_TEST_PATH}/main)
 
 
 

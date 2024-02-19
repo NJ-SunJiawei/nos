@@ -15,13 +15,10 @@
 #include <libgen.h>
 #include "private/os_clog_priv.h"
 
-int g_logLevel = MAX_LOG_LEVEL; 
-unsigned int g_modMask = 0; 
-
 PRIVATE FILE* g_fp = NULL;       /* global file pointer */
 PRIVATE int g_fd;                /* Global file descriptor for L2 & L3 */
 PRIVATE char g_logDir[MAX_FILENAME_LEN] = "/var/log";
-PRIVATE char g_fileName[MAX_FILENAME_LEN] = "os";
+PRIVATE char g_fileName[MAX_FILENAME_LEN] = "ct";
 PRIVATE char g_fileList[CLOG_MAX_FILES][MAX_FILENAME_LENGTH];
 
 PRIVATE unsigned char g_nMaxLogFiles = 1;                       /* MAX Log Files 1 */
@@ -45,6 +42,7 @@ PRIVATE void ctlog_create_new_log_file(void);
 
 PRIVATE void ctlog_flush_data(int sig)
 {
+	fflush(g_fp);
 	fclose(g_fp);
 
 	if(SIGSEGV == sig)
@@ -88,8 +86,8 @@ PRIVATE void ctlog_catch_segViolation(int sig)
 			nStrLen += strlen(sFunctions[i]) + strlen(sFileNames[i]) + 15;
 		}
 	
-		os_logs(FATAL, CLOG_SEGFAULT_STR, buf);
-		fflush(g_fp);
+		os_log(FATAL, CLOG_SEGFAULT_STR, buf);
+		//fflush(g_fp);
 
 		free(strings);
 	}
@@ -129,30 +127,28 @@ PRIVATE void ctlog_create_new_log_file(void)
    /* get current time, when file is created */
    ctlog_timestamp(curTime); 
    temptr = strchr(curTime, '.');
-   if (temptr != NULL)
-   {
+   if (temptr != NULL){
       *temptr = 0;
    }
 
-   dir  = opendir(g_logDir);
-   if ( dir == NULL )
-   { 
+   dir = opendir(g_logDir);
+
+   if (dir == NULL){ 
       mkdir(g_logDir, O_RDWR);
    }
-   else
-   {
+   else{
       closedir(dir);
    }
 
    /* remove old file from system */
-   if( g_fileList[g_nCurrFileIdx][0] != '\0' )
+   if(g_fileList[g_nCurrFileIdx][0] != '\0')
       unlink(g_fileList[g_nCurrFileIdx]);
 
    /* create file name, Example-> dbglog_2013_08_11_15_30_00 */
-   sprintf(g_fileList[g_nCurrFileIdx], "%s/%s_%s.txt",g_logDir, g_fileName, curTime );
-   fp = fopen(g_fileList[g_nCurrFileIdx], "w+");
+   sprintf(g_fileList[g_nCurrFileIdx], "%s/%s_%s.log",g_logDir, g_fileName, curTime);
+   fp = fopen(g_fileList[g_nCurrFileIdx], "a+");
 
-   if( fp == NULL ) {
+   if(fp == NULL) {
       fprintf(stderr, "Failed to open log file %s\n", g_fileList[g_nCurrFileIdx]);
       return;
    }
@@ -162,23 +158,23 @@ PRIVATE void ctlog_create_new_log_file(void)
    g_fp = fp;
    g_fd = fd;
 
-   if( fcntl(g_fd, F_SETFL, fcntl(g_fd, F_GETFL, 0) | O_NONBLOCK | O_ASYNC ) == -1 ) {
+   if(fcntl(g_fd, F_SETFL, fcntl(g_fd, F_GETFL, 0) | O_NONBLOCK | O_ASYNC ) == -1) {
       fprintf(stderr, "RLOG: Cannot enable Buffer IO or make file non-blocking\n");
    }
 
    setvbuf ( fp , NULL, _IOLBF, 1024 );//line buffer
 
-   if( prev_fp != NULL )
+   if(prev_fp != NULL)
       fclose(prev_fp);
 
-   if( ++g_nCurrFileIdx == g_nMaxLogFiles )
+   if(++g_nCurrFileIdx == g_nMaxLogFiles)
       g_nCurrFileIdx = 0;
 }
 
 #ifdef CTLOG_ALLOW_CONSOLE_LOGS
 PRIVATE void ctlog_add_stderr(void)
 {
-	os_ctlog_set_fileName("stdout");
+	os_ctlog_set_fileName("stderr");
 	g_fp = stderr;
     return;
 }
@@ -191,7 +187,7 @@ void os_ctlog_set_fileSize_limit(unsigned int maxFileSize)
 
 void os_ctlog_set_fileNum(unsigned char maxFiles)
 {
-	if( maxFiles > CLOG_MAX_FILES || maxFiles == 0 ) {
+	if(maxFiles > CLOG_MAX_FILES || maxFiles == 0) {
 		g_nMaxLogFiles = CLOG_MAX_FILES;
 		return;
 	}
@@ -228,7 +224,7 @@ void os_ctlog_set_log_level(os_clog_level_e logLevel)
 
 void os_ctlog_set_module_mask(unsigned int modMask)
 {
-	g_modMask =  (modMask == 0 ) ? 0 : (g_modMask ^ modMask);
+	g_modMask = (modMask == 0 ) ? 0 : (g_modMask ^ modMask);
 }
 
 void os_ctlog_init(void)
@@ -246,125 +242,20 @@ void os_ctlog_init(void)
 #endif
 }
 
+void os_ctlog_final(void)
+{
+	fflush(g_fp);
+	fclose(g_fp);
+}
+
+PRIVATE void ctlog_hex_to_asii(char* p, const char* h, int hexlen)
+{
+   for(int i = 0; i < hexlen; i++, p+=3, h++){
+	   sprintf(p, "%02x ", *h);
+   }
+}
+
 #define TIME_PARAMS tm->tm_mday, tm->tm_mon+1, tm->tm_year+1900,tm->tm_hour, tm->tm_min,tm->tm_sec,usec/1000
-
-void ctlogS(int logLevel, const char* modName, char* file, const char* func, int line, const char* fmtStr, const char* str, ...)
-{
-	int usec=0;
-
-	struct tm* tm = ctlog_get_timestamp(&usec);
-   	if (tm) fprintf(g_fp, fmtStr, TIME_PARAMS, modName, basename(file), func, line, g_logStr[logLevel], str);
-
-#ifdef CTLOG_ALLOW_CONSOLE_LOGS
-	fflush(g_fp);
-#else
-	CHECK_CTFILE_SIZE
-#endif
-}
-
-void ctlogH(int logLevel, const char* modName, char* file, const char* func, int line, const char* fmtStr, const char* hexdump, int hexlen, ...)
-{
-	int usec=0;
-	char szHex[MAX_LOG_BUF_SIZE*3];
-
-	struct tm* tm = ctlog_get_timestamp(&usec);
-	hex_to_asii(szHex, hexdump, hexlen);
-	if (tm) fprintf(g_fp, fmtStr, TIME_PARAMS, modName, basename(file), func, line, g_logStr[logLevel], szHex);
-
-#ifdef CTLOG_ALLOW_CONSOLE_LOGS
-	fflush(g_fp);
-#else
-	CHECK_CTFILE_SIZE
-#endif
-}
-
-void ctlogSP(int logLevel, const char* modName, char* file, const char* func, int line, const char* fmtStr, log_sp_arg_e splType,
-				unsigned int splVal, unsigned int arg1, unsigned int arg2, unsigned int arg3, unsigned int arg4, ...)
-{
-	int usec=0;
-
-	struct tm* tm = ctlog_get_timestamp(&usec);
-	if (tm) fprintf(g_fp, fmtStr, TIME_PARAMS, modName, basename(file), func, line, g_logStr[logLevel], g_splStr[splType], splVal, arg1, arg2, arg3, arg4);
-
-#ifdef CTLOG_ALLOW_CONSOLE_LOGS
-	fflush(g_fp);
-#else
-	CHECK_CTFILE_SIZE
-#endif
-}
-
-
-void ctlog0(int logLevel, const char* modName, char* file, const char* func, int line, const char* fmtStr, ...)
-{
-	int usec=0;
-
-	struct tm* tm = ctlog_get_timestamp(&usec);
-	if (tm) fprintf(g_fp, fmtStr, TIME_PARAMS, modName, basename(file), func, line, g_logStr[logLevel]);
-
-#ifdef CTLOG_ALLOW_CONSOLE_LOGS
-	fflush(g_fp);
-#else
-	CHECK_CTFILE_SIZE
-#endif
-}
-
-void ctlog1(int logLevel, const char* modName, char* file, const char* func, int line, const char* fmtStr, unsigned int arg1, ...)
-{
-	int usec=0;
-
-	struct tm* tm = ctlog_get_timestamp(&usec);
-	if (tm) fprintf(g_fp, fmtStr, TIME_PARAMS, modName, basename(file), func, line, g_logStr[logLevel], arg1);
-
-#ifdef CTLOG_ALLOW_CONSOLE_LOGS
-	fflush(g_fp);
-#else
-	CHECK_CTFILE_SIZE
-#endif
-}
-
-void ctlog2(int logLevel, const char* modName, char* file, const char* func, int line, const char* fmtStr, unsigned int arg1, unsigned int arg2, ...)
-{
-	int usec=0;
-
-	struct tm* tm = ctlog_get_timestamp(&usec);
-	if (tm) fprintf(g_fp, fmtStr, TIME_PARAMS, modName, basename(file), func, line, g_logStr[logLevel], arg1, arg2);
-
-#ifdef CTLOG_ALLOW_CONSOLE_LOGS
-	fflush(g_fp);
-#else
-	CHECK_CTFILE_SIZE
-#endif
-}
-
-void ctlog3(int logLevel, const char* modName, char* file, const char* func, int line, const char* fmtStr, 
-				unsigned int arg1, unsigned int arg2, unsigned int arg3, ...)
-{
-	int usec=0;
-
-	struct tm* tm = ctlog_get_timestamp(&usec);
-	if (tm) fprintf(g_fp, fmtStr, TIME_PARAMS, modName, basename(file), func, line, g_logStr[logLevel], arg1, arg2, arg3);
-
-#ifdef CTLOG_ALLOW_CONSOLE_LOGS
-	fflush(g_fp);
-#else
-	CHECK_CTFILE_SIZE
-#endif
-}
-
-void ctlog4(int logLevel, const char* modName, char* file, const char* func, int line, const char* fmtStr, 
-				unsigned int arg1, unsigned int arg2, unsigned int arg3, unsigned int arg4, ...)
-{
-	int usec=0;
-
-	struct tm* tm = ctlog_get_timestamp(&usec);
-	if (tm) fprintf(g_fp, fmtStr, TIME_PARAMS, modName, basename(file), func, line, g_logStr[logLevel], arg1, arg2, arg3, arg4);
-
-#ifdef CTLOG_ALLOW_CONSOLE_LOGS
-	fflush(g_fp);
-#else
-	CHECK_CTFILE_SIZE
-#endif
-}
 
 void ctlogN(int logLevel, const char* modName, char* file, const char* func, int line, const char* fmtStr, ...)
 {
@@ -402,6 +293,22 @@ void ctlogSPN(int logLevel, const char* modName, char* file, const char* func, i
     va_end(argList);
 
     fprintf(g_fp, "%s%s",szLog1, szLog2);
+
+#ifdef CTLOG_ALLOW_CONSOLE_LOGS
+	fflush(g_fp);
+#else
+	CHECK_CTFILE_SIZE
+#endif
+}
+
+void ctlogH(int logLevel, const char* modName, char* file, const char* func, int line, const char* fmtStr, const char* hexdump, int hexlen, ...)
+{
+	int usec=0;
+	char szHex[MAX_LOG_BUF_SIZE*3];
+
+	struct tm* tm = ctlog_get_timestamp(&usec);
+	ctlog_hex_to_asii(szHex, hexdump, hexlen);
+	if (tm) fprintf(g_fp, fmtStr, TIME_PARAMS, modName, basename(file), func, line, g_logStr[logLevel], szHex);
 
 #ifdef CTLOG_ALLOW_CONSOLE_LOGS
 	fflush(g_fp);

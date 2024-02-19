@@ -8,6 +8,9 @@
 #include "system_config.h"
 #include "os_init.h"
 
+int g_logLevel = TRACE; 
+unsigned int g_modMask = 0; 
+
 PRIVATE os_context_t self = {
     .buf.pool = 8,
     .buf.config_pool = 8,
@@ -34,7 +37,7 @@ PRIVATE void os_clog_enable_coredump(bool enable_core)
 #endif
 }
 
-_ENTER_API_ void os_core_initialize(void)
+_ENTER_API_ void os_initialize(void)
 {
 	os_clog_enable_coredump(true);
 
@@ -55,7 +58,7 @@ _ENTER_API_ void os_core_initialize(void)
 #endif
 }
 
-_EXIT_API_ void os_core_terminate(void)
+_EXIT_API_ void os_terminate(void)
 {
 #if OS_USE_TALLOC == 1
 	os_kmem_final();
@@ -64,6 +67,10 @@ _EXIT_API_ void os_core_terminate(void)
 #endif
 
 #if defined(OS_USE_CDLOG)
-   os_cdlog_final();
+	os_cdlog_final();
+#elif defined(OS_USE_CTLOG)
+	os_ctlog_final();
+#elif defined(OS_USE_CMLOG)
+	os_cmlog_final();
 #endif
 }

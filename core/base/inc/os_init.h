@@ -26,7 +26,7 @@
 #define OS_BASE_INSIDE
 
 #define OS_USE_TALLOC 0
-#define OS_USE_CTLOG
+#define OS_USE_CMLOG
 
 #include "os_platform.h"
 

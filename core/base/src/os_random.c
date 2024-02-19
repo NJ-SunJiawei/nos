@@ -33,7 +33,7 @@ void os_random(void *buf, size_t buflen)
 #elif defined(HAVE_GETRANDOM)
     int rc = getrandom(buf, buflen, GRND_NONBLOCK);
     if (rc < 0) {
-        os_logp0(ERROR, ERRNOID, os_errno, "getrandom() failed");
+        os_logsp(ERROR, ERRNOID, os_errno, "getrandom() failed");
         os_assert_if_reached();
     }
 #elif defined(HAVE_ARC4RANDOM_BUF)
@@ -49,7 +49,7 @@ void os_random(void *buf, size_t buflen)
 
         if (fd == -1)
             if ((fd = open(OS_DEV_RANDOM, O_RDONLY)) == -1) {
-                os_logp0(FATAL, ERRNOID, os_errno, "open() failed");
+                os_logsp(FATAL, ERRNOID, os_errno, "open() failed");
                 os_assert_if_reached();
             }
         
@@ -58,7 +58,7 @@ void os_random(void *buf, size_t buflen)
         } while (rc == -1 && errno == EINTR);
 
         if (rc < 0) {
-            os_logp0(ERROR, ERRNOID, os_errno, "read() failed");
+            os_logsp(ERROR, ERRNOID, os_errno, "read() failed");
             close(fd);
             return;
         }

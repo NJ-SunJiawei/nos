@@ -111,7 +111,7 @@ void *os_malloc_debug(size_t size, const char *file_line)
     headroom = sizeof(os_buf_t *);
     buf = os_buf_alloc_debug(NULL, headroom + size, file_line);
     if (!buf) {
-        os_log2(ERROR, "os_buf_alloc_debug[headroom:%d, size:%d] failed",
+        os_log(ERROR, "os_buf_alloc_debug[headroom:%d, size:%d] failed",
                 (int)headroom, (int)size);
         return NULL;
     }
@@ -146,7 +146,7 @@ void *os_calloc_debug(size_t nmemb, size_t size, const char *file_line)
 
     ptr = os_malloc_debug(nmemb * size, file_line);
     if (!ptr) {
-        os_log2(ERROR, "os_malloc_debug[nmemb:%d, size:%d] failed",
+        os_log(ERROR, "os_malloc_debug[nmemb:%d, size:%d] failed",
                 (int)nmemb, (int)size);
         return NULL;
     }
@@ -160,7 +160,6 @@ void *os_realloc_debug(void *ptr, size_t size, const char *file_line)
     size_t headroom = 0;
     os_buf_t *buf = NULL;
     os_cluster_t *cluster = NULL;
-	char point[64];
 
     if (!ptr)
         return os_malloc(size);
@@ -170,15 +169,14 @@ void *os_realloc_debug(void *ptr, size_t size, const char *file_line)
     memcpy(&buf, (unsigned char*)ptr - headroom, headroom);
 
     if (!buf) {
-		sprintf((char *)point, "%p", ptr);
-		os_logs(ERROR, ">>>Cannot get buf from ptr[%s]", point);
-        os_log1(ERROR, "headroom[%d]<<<", (int)headroom);
+        os_log(ERROR, "Cannot get pkbuf from ptr[%p], headroom[%d]", ptr, (int)headroom);
+
         return NULL;
     }
 
     cluster = buf->cluster;
     if (!cluster) {
-        os_log0(ERROR, "No cluster");
+        os_log(ERROR, "No cluster");
         return NULL;
     }
 
@@ -192,7 +190,7 @@ void *os_realloc_debug(void *ptr, size_t size, const char *file_line)
 
         new = os_malloc_debug(size, file_line);
         if (!new) {
-            os_log1(ERROR, "os_malloc_debug[%d] failed", (int)size);
+            os_log(ERROR, "os_malloc_debug[%d] failed", (int)size);
             return NULL;
         }
 

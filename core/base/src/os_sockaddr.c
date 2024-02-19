@@ -100,8 +100,7 @@ int os_addaddrinfo(os_sockaddr_t **sa_list,
 
     rc = getaddrinfo(hostname, service, &hints, &ai_list);
     if (rc != 0) {
-		os_logs(ERROR, ">>>getaddrinfo(%s)", hostname);
-        os_logp3(ERROR, ERRNOID, os_socket_errno, "getaddrinfo(%d:%d:0x%x) failed<<<", family, port, flags);
+        os_logsp(ERROR, ERRNOID, os_socket_errno, "getaddrinfo(%d:%s:%d:0x%x) failed", family, hostname, port, flags);
         return OS_ERROR;
     }
 
@@ -117,7 +116,7 @@ int os_addaddrinfo(os_sockaddr_t **sa_list,
 
         new = os_calloc(1, sizeof(os_sockaddr_t));
         if (!new) {
-            os_log0(ERROR, "os_calloc() failed");
+            os_log(ERROR, "os_calloc() failed");
             return OS_ERROR;
         }
         memcpy(&new->sa, ai->ai_addr, ai->ai_addrlen);
@@ -126,14 +125,12 @@ int os_addaddrinfo(os_sockaddr_t **sa_list,
         if (hostname) {
             if (os_inet_pton(ai->ai_family, hostname, &tmp) == OS_OK) {
                 /* It's a valid IP address */
-				os_logs(DEBUG, "addr:%s", OS_ADDR(new, buf));
-				os_log1(DEBUG, "port:%d", port);
+				os_log(DEBUG, "addr:%s, port:%d", OS_ADDR(new, buf), port);
             } else {
                 /* INVALID IP address! We assume it is a hostname */
                 new->hostname = os_strdup(hostname);
                 os_assert(new->hostname);
-				os_logs(DEBUG, "name:%s", new->hostname);
-				os_log1(DEBUG, "port:%d", port);
+				os_log(DEBUG, "name:%s, port:%d", new->hostname, port);
             }
         }
 
@@ -148,9 +145,8 @@ int os_addaddrinfo(os_sockaddr_t **sa_list,
     freeaddrinfo(ai_list);
 
     if (prev == NULL) {
-		os_logs(ERROR, ">>>os_getaddrinfo(%s)", hostname);
-        os_logp3(ERROR, ERRNOID, os_socket_errno, "os_getaddrinfo(%d:%d:0x%x) failed<<<", family, port, flags);
-        return OS_ERROR;
+        os_logsp(ERROR, ERRNOID, os_socket_errno, "os_getaddrinfo(%d:%s:%d:%d) failed", family, hostname, port, flags);
+		return OS_ERROR;
     }
 
     return OS_OK;
@@ -195,13 +191,13 @@ int os_copyaddrinfo(os_sockaddr_t **dst, const os_sockaddr_t *src)
         if (!d) {
             *dst = d = os_memdup(s, sizeof *s);
             if (!(*dst)) {
-                os_log0(ERROR, "os_memdup() failed");
+                os_log(ERROR, "os_memdup() failed");
                 return OS_ERROR;
             }
         } else {
             d = d->next = os_memdup(s, sizeof *s);
             if (!d) {
-                os_log0(ERROR, "os_memdup() failed");
+                os_log(ERROR, "os_memdup() failed");
                 return OS_ERROR;
             }
         }
@@ -209,7 +205,7 @@ int os_copyaddrinfo(os_sockaddr_t **dst, const os_sockaddr_t *src)
             if (s == src || s->hostname != src->hostname) {
                 d->hostname = os_strdup(s->hostname);
                 if (!d->hostname) {
-                    os_log0(ERROR, "os_memdup() failed");
+                    os_log(ERROR, "os_memdup() failed");
                     return OS_ERROR;
                 }
             } else {
@@ -259,7 +255,7 @@ os_sockaddr_t *os_link_local_addr(const char *dev, const os_sockaddr_t *sa)
 
     rc = getifaddrs(&iflist);
     if (rc != 0) {
-        os_logp0(ERROR, ERRNOID, os_socket_errno, "getifaddrs failed");
+        os_logsp(ERROR, ERRNOID, os_socket_errno, "getifaddrs failed");
         return NULL;
     }
 
@@ -287,7 +283,7 @@ os_sockaddr_t *os_link_local_addr(const char *dev, const os_sockaddr_t *sa)
 
         addr = os_calloc(1, sizeof(os_sockaddr_t));
         if (!addr) {
-            os_log0(ERROR, "os_calloc() failed");
+            os_log(ERROR, "os_calloc() failed");
             return NULL;
         }
         os_assert(addr);
@@ -359,7 +355,7 @@ const char *os_inet_ntop(void *sa, char *buf, int buflen)
         return inet_ntop(family, &sockaddr->sin6.sin6_addr, buf,
                 INET6_ADDRSTRLEN);
     default:
-        os_log1(FATAL, "Unknown family(%d)", family);
+        os_log(FATAL, "Unknown family(%d)", family);
         os_abort();
         return NULL;
     }
@@ -382,7 +378,7 @@ int os_inet_pton(int family, const char *src, void *sa)
         return inet_pton(family, src, &dst->sin6.sin6_addr) == 1 ?
              OS_OK : OS_ERROR;
     default:
-        os_log1(FATAL, "Unknown family(%d)", family);
+        os_log(FATAL, "Unknown family(%d)", family);
         os_abort();
         return OS_ERROR;
     }
@@ -400,7 +396,7 @@ socklen_t os_sockaddr_len(const void *sa)
     case AF_INET6:
         return sizeof(struct sockaddr_in6);
     default:
-        os_log1(FATAL, "Unknown family(%d)", sockaddr->os_sa_family);
+        os_log(FATAL, "Unknown family(%d)", sockaddr->os_sa_family);
         os_abort();
         return OS_ERROR;
     }
@@ -432,7 +428,7 @@ bool os_sockaddr_is_equal(const void *p, const void *q)
             return false;
         return true;
     default:
-        os_log1(ERROR, "Unexpected address faimily %u", a->os_sa_family);
+        os_log(ERROR, "Unexpected address faimily %u", a->os_sa_family);
         os_abort();
     }
 }
@@ -517,7 +513,7 @@ PRIVATE int parse_ip(
              * addresses; this of course forces the user to specify
              * IPv4 addresses in a.b.c.d style instead of ::ffff:a.b.c.d style.
              */
-            os_log0(ERROR, "Cannot support IPv4-mapped IPv6: "
+            os_log(ERROR, "Cannot support IPv4-mapped IPv6: "
                     "Use IPv4 address in a.b.c.d style "
                     "instead of ::ffff:a.b.c.d style");
             return OS_ERROR;
@@ -586,8 +582,7 @@ int os_ipsubnet(os_ipsubnet_t *ipsub,
      * to be an IP address
      */
     if (!looks_like_ip(ipstr)) {
-        os_logs(ERROR, "looks_like_ip:%s failed", ipstr);
-		os_logs(ERROR, "looks_like_ip:%s failed", mask_or_numbits);
+        os_log(ERROR, "looks_like_ip(%s, %s) failed", ipstr, mask_or_numbits);
         return OS_ERROR;
     }
 
@@ -596,8 +591,7 @@ int os_ipsubnet(os_ipsubnet_t *ipsub,
 
     rv = parse_ip(ipsub, ipstr, mask_or_numbits == NULL);
     if (rv != OS_OK) {
-		os_logs(ERROR, "parse_ip:%s failed", ipstr);
-		os_logs(ERROR, "parse_ip:%s failed", mask_or_numbits);
+		os_log(ERROR, "parse_ip(%s, %s) failed", ipstr, mask_or_numbits);
         return rv;
     }
 
@@ -629,7 +623,7 @@ int os_ipsubnet(os_ipsubnet_t *ipsub,
             ipsub->family == AF_INET) {
             /* valid IPv4 netmask */
         } else {
-            os_logs(ERROR, "Bad netmask %s", mask_or_numbits);
+            os_log(ERROR, "Bad netmask %s", mask_or_numbits);
             return OS_ERROR;
         }
     }

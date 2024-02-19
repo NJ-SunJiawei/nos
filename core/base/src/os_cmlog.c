@@ -1,6 +1,6 @@
 /************************************************************************
  *File name: os_cmlog.c
- *Description: CMLOG_USE_CIRCULAR_BUFFER + CMLOG_USE_TTI_LOGGING
+ *Description:
  *
  *Current Version:
  *Author: Created by sjw --- 2024.02
@@ -15,13 +15,11 @@
 #include <libgen.h>
 #include "private/os_clog_priv.h"
 
-int g_logLevel = MAX_LOG_LEVEL; 
-unsigned int g_modMask = 0; 
 
 PRIVATE FILE* g_fp = NULL;       /* global file pointer */
 PRIVATE int g_fd;                /* Global file descriptor for L2 & L3 */
 PRIVATE char g_logDir[MAX_FILENAME_LEN] = "/var/log";
-PRIVATE char g_fileName[MAX_FILENAME_LEN] = "os";
+PRIVATE char g_fileName[MAX_FILENAME_LEN] = "cd cm";
 PRIVATE char g_fileList[CLOG_MAX_FILES][MAX_FILENAME_LENGTH];
 
 PRIVATE unsigned char g_nMaxLogFiles = 1;                       /* MAX Log Files 1 */
@@ -29,16 +27,8 @@ PRIVATE unsigned int g_uiMaxFileSizeLimit = MAX_FILE_SIZE;      /* Max File Size
 PRIVATE unsigned int g_cirMaxBufferSize = CLOG_MAX_CIRBUF_SIZE; /* Default circular buffer size 100Kb*/
 PRIVATE char tz_name[2][CLOG_TIME_ZONE_LEN + 1] = {"CST-8", ""};
 
-
-PRIVATE int	g_nWrites = 0;                /* number of times log function is called */
 PRIVATE int g_nCurrFileIdx = 0;           /* Current File Number index */
 
-PRIVATE void cmlog_create_new_log_file(void);
-
-PRIVATE unsigned int g_nLogPort = CLOG_REMOTE_LOGGING_PORT;     /* Remote Logging port */
-PRIVATE unsigned char g_bRemoteLoggingDisabled = 0;             /* Remote logging flag */
-
-#ifdef CMLOG_USE_CIRCULAR_BUFFER
 /* Thread-specific data key visible to all threads */
 PRIVATE os_thread_key_t	g_threadkey;
 PRIVATE os_thread_mutex_t g_logmutex; /* Mutex to protect circular buffers */
@@ -50,56 +40,20 @@ PRIVATE int thread_signalled;
 PRIVATE THREAD_DATA *g_pSingCirBuff = NULL;
 PRIVATE unsigned short g_prevLogOffset=0;
 PRIVATE int g_threadRunFg = 1;
-PRIVATE void cmlog_read_cirbuf(void);
-#endif
+
 
 PRIVATE unsigned char g_writeCirBuf = 0;
 PRIVATE volatile unsigned int g_rlogPositionIndex=0;
 PRIVATE unsigned int numTtiTicks;         /* TTI Count */
-PRIVATE int g_nCliSocket = 0;             /* Socke descriptor if remote client is connected */
 
 PRIVATE unsigned int g_clogWriteCount = 0;
 PRIVATE unsigned int g_maxClogCount   = 50;
 PRIVATE unsigned int g_logsDropCnt    = 0;
 PRIVATE cLogCntLmt   g_clLogCntLimit = CL_LOG_COUNT_LIMIT_STOP;
-PRIVATE void cmlog_close_connection(int sockfd);
 
-#ifdef CMLOG_USE_CIRCULAR_BUFFER
+PRIVATE void cmlog_create_new_log_file(void);
+PRIVATE void cmlog_read_cirbuf(void);
 
-    #ifdef CMLOG_USE_TTI_LOGGING
-    #define CHECK_FILE_SIZE if( ++g_nWrites == 200 ) \
-	    { \
-		    g_nWrites = 0; \
-		    ctlog1(TIME_REFERENCE, NONE, (unsigned int)time(NULL));\
-	    } 
-    #else
-    #define CHECK_FILE_SIZE
-    #endif /* CMLOG_USE_TTI_LOGGING */
-
-#else /* CMLOG_USE_CIRCULAR_BUFFER */
-
-	#ifdef CMLOG_USE_TTI_LOGGING
-	#define CHECK_FILE_SIZE if( ++g_nWrites == 200 ) \
-		{ \
-			if( g_fp && ftell(g_fp) > g_uiMaxFileSizeLimit ) { \
-				cmlog_create_new_log_file(); \
-			}\
-			g_nWrites = 0; \
-			ctlog1(TIME_REFERENCE, NONE, (unsigned int)time(NULL));\
-		} 
-	#else
-	#define CHECK_FILE_SIZE if( ++g_nWrites == 200 ) \
-		{ \
-			if( g_fp && ( (unsigned int)(ftell(g_fp)) > g_uiMaxFileSizeLimit) ) { \
-				cmlog_create_new_log_file(); \
-			}\
-			g_nWrites = 0; \
-		} 
-	#endif /* CMLOG_USE_TTI_LOGGING */
-#endif /*  CMLOG_USE_CIRCULAR_BUFFER */
-
-
-#ifdef CMLOG_USE_CIRCULAR_BUFFER
 
 #define CHECK_CIRFILE_SIZE if( g_fp && ftell(g_fp) > g_uiMaxFileSizeLimit ) \
 	{ \
@@ -108,10 +62,9 @@ PRIVATE void cmlog_close_connection(int sockfd);
 
 PRIVATE void cmlog_deregister_thread(void* argv)
 {
-
 	THREAD_DATA* pThrData = (THREAD_DATA*)(argv);
 
-	if( argv == NULL )
+	if(argv == NULL)
 		return;
 
 	/* lock the mutex, to make sure no one is accessing this buffer */
@@ -119,10 +72,10 @@ PRIVATE void cmlog_deregister_thread(void* argv)
 
 	g_pCirList[pThrData->listIndex]  = NULL;
 
-	if( pThrData->logBuff != NULL )
-		os_free(pThrData->logBuff);
+	if(pThrData->logBuff != NULL)
+		free(pThrData->logBuff);
 
-	os_free(argv);
+	free(argv);
 
 	/* unlock the mutex */
 	os_thread_mutex_unlock(&g_logmutex);
@@ -139,7 +92,7 @@ void cmlog_set_specific(const void *pThrData)
 {
 	int retVal = pthread_setspecific(g_threadkey, pThrData);
 	
-	if( retVal!=0 ) {
+	if(retVal!=0) {
       fprintf(stderr, "Failed to associate the value with the key or invalid key");
       _exit(0);
    }
@@ -148,9 +101,9 @@ void cmlog_set_specific(const void *pThrData)
 
 PRIVATE THREAD_DATA* cmlog_register_thread(const char* taskName)
 {
-	THREAD_DATA* pThrData = (THREAD_DATA*) cl_calloc(sizeof(THREAD_DATA));
+	THREAD_DATA* pThrData = (THREAD_DATA*) malloc(sizeof(THREAD_DATA));
 
-	if( pThrData == NULL ) {
+	if(pThrData == NULL) {
 		fprintf(stderr, "Failed to allocate memory for thread %s\n", taskName);
 		_exit(0);
 	}
@@ -158,10 +111,10 @@ PRIVATE THREAD_DATA* cmlog_register_thread(const char* taskName)
 	os_thread_mutex_lock(&g_logmutex);
 
 	/* Allocate circular buffer */
-	pThrData->logBuff = (unsigned char*) os_malloc(g_cirMaxBufferSize);
+	pThrData->logBuff = (unsigned char*) malloc(g_cirMaxBufferSize);
 
-	if( pThrData->logBuff == NULL ) {
-		fprintf(stderr, "Failed to allocate memory [%ld] for thread %s\n",g_cirMaxBufferSize, taskName);
+	if(pThrData->logBuff == NULL) {
+		fprintf(stderr, "Failed to allocate memory [%d] for thread %s\n",g_cirMaxBufferSize, taskName);
 		_exit(0);
 	}
 
@@ -208,7 +161,7 @@ PRIVATE void* cmlog_cirbuf_read_thread(void* arg)
 		//if(retCode == 0) fprintf(stderr, "cirBufReaderThread: I am signalled to read data\n");
 
 		/* If someone has given signal or there is timeout */
-		if( retCode == 0 || retCode  == ETIMEDOUT ){
+		if(retCode == 0 || retCode  == ETIMEDOUT){
 			cmlog_read_cirbuf();
 			continue;
 		}
@@ -259,13 +212,6 @@ PRIVATE void cmlog_read_cirbuf(void)
             continue;
          }
 
-         /* If post processor connected send logs */
-         if(g_nCliSocket &&  os_send(g_nCliSocket, pThrData->logBuff+pThrData->logReadPos, dataLen, 0 ) == -1) 
-         {
-            cmlog_close_connection(g_nCliSocket);
-            g_nCliSocket = 0;
-         }
-
          /* reset log read position to last known position */
          pThrData->logReadPos = writerPos;
       }
@@ -282,12 +228,6 @@ PRIVATE void cmlog_read_cirbuf(void)
             continue;
          }
 
-         /* If post processor connected send logs */
-         if(g_nCliSocket &&  os_send(g_nCliSocket, pThrData->logBuff+pThrData->logReadPos, dataLen, 0 ) == -1) 
-         {
-            cmlog_close_connection(g_nCliSocket);
-            g_nCliSocket = 0;
-         }
 
          /* Write from 0 to len position */
          if(fwrite(pThrData->logBuff, 1, writerPos, g_fp) == -1)
@@ -297,12 +237,6 @@ PRIVATE void cmlog_read_cirbuf(void)
             continue;
          }
 
-         /* If post processor connected send logs */
-         if(g_nCliSocket &&  os_send(g_nCliSocket, pThrData->logBuff, writerPos, 0 ) == -1) 
-         {
-            cmlog_close_connection(g_nCliSocket);
-            g_nCliSocket = 0;
-         }
          /* reset log read position to last known position */
          pThrData->logReadPos = writerPos;
       }
@@ -316,9 +250,8 @@ PRIVATE void cmlog_read_cirbuf(void)
    g_writeCirBuf = 0;
 }
 
-#endif
 
-PRIVATE EndianType cmlog_getCPU_endian(void)
+/*PRIVATE EndianType cmlog_getCPU_endian(void)
 {
     unsigned short x;
     unsigned char c;
@@ -327,93 +260,17 @@ PRIVATE EndianType cmlog_getCPU_endian(void)
     c = *(unsigned char *)(&x);
 
 	return ( c == 0x01 ) ? little_endian : big_endian;
-}
-
-PRIVATE void cmlog_write_file_header(FILE* fp)
-{
-	FILE_HEADER fileHdr;
-
-	memset(&fileHdr, 0, sizeof(FILE_HEADER));
-
-	fileHdr.endianType = cmlog_getCPU_endian();
-	fileHdr.dummy32 = 2818049;
-	fileHdr.END_MARKER = 0xFFFF;
-	strncpy(fileHdr.szTimeZone, tz_name[0], CLOG_TIME_ZONE_LEN);
-   	fileHdr.time_sec = time(NULL);
-
-	if(fwrite((const void*)&fileHdr, 1, sizeof(FILE_HEADER), fp) ==  -1 )
-	{
-		fprintf(stderr, "Failed to write file header\n");
-		cmlog_create_new_log_file();
-	}
-}
-
-PRIVATE void* cmlog_log_server_thread(void* arg)
-{
-	struct sockaddr_in serv_addr;
-	struct sockaddr_in cli_addr;
-	int sockfd;
-	int newsockfd;
-	int clilen = 0;
-	int domain = AF_INET;
-	memset((void*)&serv_addr, 0, sizeof(serv_addr));
-
-	printf("Initializing CTLOG for IPV4\n");
-	clilen = sizeof(struct sockaddr_in);
-	domain = AF_INET;
-	serv_addr.sin_family = AF_INET;
-	serv_addr.sin_addr.s_addr = INADDR_ANY;
-	serv_addr.sin_port = htons(g_nLogPort);
-
-	if( (sockfd = socket(domain, SOCK_STREAM, IPPROTO_TCP)) < 0 ) {
-		fprintf(stderr, "CLOG: Failed to create socket\n");
-		_exit(0);
-	}
-
-	if( bind(sockfd, (struct sockaddr*)&(serv_addr), sizeof(struct sockaddr_in)) < 0 ) {
-		fprintf(stderr, "CLOG: Error in Binding\n");
-		perror("RLOG");
-		_exit(0);
-	}
-
-	listen(sockfd, 5);
-
-	while(1)
-	{
-		newsockfd = accept(sockfd, (struct sockaddr*)&(cli_addr), (socklen_t *) &clilen);	
-		if( newsockfd < 0 ) {
-			fprintf(stderr, "CLOG: Error on accept\n");
-			perror("CLOG");
-			return 0;
-		}
-
-		/* If remote logging is disabled or there is already 1 client connected */
-		if( g_bRemoteLoggingDisabled || g_nCliSocket ) {
-			/* close the new connection and proceed */
-			cmlog_close_connection(newsockfd);
-			continue;
-		} 
-
-		g_nCliSocket = newsockfd;
-	}
-
-	return 0;
-}
-
-PRIVATE void cmlog_close_connection(int sockfd)
-{
-	shutdown(sockfd, SHUT_RDWR);
-	close(sockfd);
-}
+}*/
 
 PRIVATE void cmlog_flush_data(int sig)
 {
-#ifdef CMLOG_USE_CIRCULAR_BUFFER
 	g_threadRunFg = 0;
+
 	cmlog_read_cirbuf();
-#endif
+
 	g_clogWriteCount = 0;
 
+	fflush(g_fp);
 	fclose(g_fp);
 
 	if(SIGSEGV == sig)
@@ -452,13 +309,13 @@ PRIVATE void cmlog_catch_segViolation(int sig)
 			sFunctions[i] = (strings[i]);
 			sFileNames[i] = "unknown file";
 
-			cmlogS(OS_SIGSEGV, FATAL, strings[i]);
+			//CMLOGX(FATAL, "%s", strings[i]);
 			//printf("BT[%d] : len [%d]: %s\n",i, strlen(sFunctions[i]),strings[i]);
 			sprintf(buf+nStrLen, "	 in Function %s (from %s)\n", sFunctions[i], sFileNames[i]);
 			nStrLen += strlen(sFunctions[i]) + strlen(sFileNames[i]) + 15;
 		}
 	
-		cmlogS(OS_SIGSEGV, FATAL, buf);
+		CMLOGX(FATAL, CLOG_SEGFAULT_STR, buf);
 
 		free(strings);
 	}
@@ -507,8 +364,8 @@ PRIVATE void cmlog_create_new_log_file(void)
    if( g_fileList[g_nCurrFileIdx][0] != '\0' )
       unlink(g_fileList[g_nCurrFileIdx]);
 
-   sprintf(g_fileList[g_nCurrFileIdx], "%s/%s_%s.bin",g_logDir, g_fileName, curTime );
-   fp = fopen(g_fileList[g_nCurrFileIdx], "ab+");
+   sprintf(g_fileList[g_nCurrFileIdx], "%s/%s_%s.log",g_logDir, g_fileName, curTime );
+   fp = fopen(g_fileList[g_nCurrFileIdx], "a+");
 
    if( fp == NULL ) {
       fprintf(stderr, "Failed to open log file %s\n", g_fileList[g_nCurrFileIdx]);
@@ -524,9 +381,8 @@ PRIVATE void cmlog_create_new_log_file(void)
       fprintf(stderr, "RLOG: Cannot enable Buffer IO or make file non-blocking\n");
    }
 
-   setvbuf ( fp , NULL, _IONBF, 1024 );//no buffer
-
-   cmlog_write_file_header(fp);
+   //setvbuf ( fp , NULL, _IONBF, 1024 );//no buffer
+   setvbuf ( fp , NULL, _IOLBF, 1024 );//line buffer
 
    if( prev_fp != NULL )
       fclose(prev_fp);
@@ -534,9 +390,6 @@ PRIVATE void cmlog_create_new_log_file(void)
    if( ++g_nCurrFileIdx == g_nMaxLogFiles )
       g_nCurrFileIdx = 0;
 
-#ifdef CMLOG_USE_TTI_LOGGING
-   cmlog1(TIME_REFERENCE, NONE, (unsigned int)time(NULL));
-#endif
 }
 
 void os_cmlog_set_fileSize_limit(unsigned int maxFileSize)
@@ -551,16 +404,6 @@ void os_cmlog_set_fileNum(unsigned char maxFiles)
 		return;
 	}
 	g_nMaxLogFiles = maxFiles;
-}
-
-void os_cmlog_set_remote_flag(int flag)
-{
-	g_bRemoteLoggingDisabled = !flag;
-}
-
-void os_cmlog_set_log_port(unsigned int port)
-{
-	g_nLogPort = port;
 }
 
 void os_cmlog_set_log_path(const char* logDir)
@@ -584,14 +427,8 @@ void os_cmlog_printf_config(void)
 
 	fprintf(stderr, "Console Logging:\t[Disabled]\n");
 	fprintf(stderr, "Binary Logging:\t\t[Enabled]\n");
-	fprintf(stderr, "Remote Logging:\t\t[%s]\n", g_bRemoteLoggingDisabled ? "Disabled" : "Enabled");
-	fprintf(stderr, "Remote Logging Port:\t[%d]\n", g_nLogPort);
-#ifdef CMLOG_USE_CIRCULAR_BUFFER
 	fprintf(stderr, "Circular Buffer:\t[Enabled]\n");
-	fprintf(stderr, "Circular BufferSize:\t[Actual:%ld][Derived:%ld]\n", g_cirMaxBufferSize/1024, g_cirMaxBufferSize);
-#else
-	fprintf(stderr, "Circular Buffer:\t[Disabled]\n");
-#endif  /* CMLOG_USE_CIRCULAR_BUFFER */
+	fprintf(stderr, "Circular BufferSize:\t[Actual:%d][Derived:%d]\n", g_cirMaxBufferSize/1024, g_cirMaxBufferSize);
 }
 
 void os_cmlog_set_fileName(const char* fileName)
@@ -619,30 +456,27 @@ void os_cmlog_init(void)
 
 	os_ctlog_printf_config();
 
-	{
-		os_thread_id_t tid;
-		if(pthread_create(&tid, NULL, cmlog_log_server_thread, NULL) != 0 ) {
-			fprintf(stderr, "Failed to initialize log server thread\n");
-			_exit(0);
-		}
+	cmlog_init_specific();
+	os_thread_id_t tid;
+	os_thread_mutex_init(&g_logmutex);
+	if( pthread_create(&tid, NULL, cmlog_cirbuf_read_thread, NULL) != 0 ) {
+		fprintf(stderr, "Failed to initialize log server thread\n");
+		_exit(0);
 	}
-
-#ifdef CMLOG_USE_CIRCULAR_BUFFER
-	{
-		cmlog_init_specific();
-
-		os_thread_id_t tid;
-		os_thread_mutex_init(&g_logmutex, NULL);
-		if( pthread_create(&tid, NULL, cmlog_cirbuf_read_thread, NULL) != 0 ) {
-			fprintf(stderr, "Failed to initialize log server thread\n");
-			_exit(0);
-		}
-		/* Initialize single circular buffer for all threads */
-		g_pSingCirBuff = cmlog_register_thread("DUMMY");
-	}
-#endif
+	/* Initialize single circular buffer for all threads */
+	g_pSingCirBuff = cmlog_register_thread("DUMMY");
 
 	cmlog_create_new_log_file();
+}
+
+
+void os_cmlog_final(void)
+{
+	g_threadRunFg = 0;
+	cmlog_read_cirbuf();
+
+	fflush(g_fp);
+	fclose(g_fp);
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -654,7 +488,7 @@ void os_cmlog_start_count_limit(void)
 {
    g_clogWriteCount = 0;
    g_clLogCntLimit = CL_LOG_COUNT_LIMIT_START;
-   printf("Start Log Restriction\n");
+   fprintf(stderr, "Start Log Restriction\n");
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -665,7 +499,7 @@ void os_cmlog_start_count_limit(void)
 //////////////////////////////////////////////////////////////////////////
 void os_cmlog_stop_count_limit(void)
 {
-   printf("Stop Log Restriction\n");
+   fprintf(stderr, "Stop Log Restriction\n");
    g_clLogCntLimit = CL_LOG_COUNT_LIMIT_STOP;
 }
 
@@ -695,8 +529,6 @@ void os_cmlog_update_ticks(void)
 }
 
 
-/* BINARY LOGGING */ 
-#define CLOG_SAVE_TIME(_logTime) _logTime.ms_tti=numTtiTicks;
 PRIVATE void cmlog_save_log_data(const void* buf, unsigned short len, unsigned int g_rlogWritePosIndex)
 {
    ++g_clogWriteCount ;
@@ -711,7 +543,6 @@ PRIVATE void cmlog_save_log_data(const void* buf, unsigned short len, unsigned i
       return;
    }
 
-#ifdef CMLOG_USE_CIRCULAR_BUFFER
    unsigned int logWritePointerPosition;
    THREAD_DATA* p = (THREAD_DATA*) g_pSingCirBuff;
 
@@ -757,17 +588,6 @@ PRIVATE void cmlog_save_log_data(const void* buf, unsigned short len, unsigned i
       memcpy(p->logBuff+logWritePointerPosition, buf, len);
       p->logBufLen += CLOG_FIXED_LENGTH_BUFFER_SIZE;
    }
-#else /* !CMLOG_USE_CIRCULAR_BUFFER */
-   if(fwrite((const void*)buf, 1, CLOG_FIXED_LENGTH_BUFFER_SIZE, g_fp) == -1) 
-   {
-      fprintf(stderr, "Failed to write log data in file\n");
-      perror("LOG");
-      cmlog_create_new_log_file();
-   }
-#endif /* CMLOG_USE_CIRCULAR_BUFFER */
-
-   CHECK_FILE_SIZE
-
 
    /*{
       static int maxlen = 0;
@@ -779,168 +599,52 @@ PRIVATE void cmlog_save_log_data(const void* buf, unsigned short len, unsigned i
 
 }
 
-void cmlogS( LOGID logId, os_clog_level_e logLevel, const char* str, ...)
+PRIVATE void cmlog_hex_to_asii(char* p, const char* h, int hexlen)
 {
-   ARGDATA arg; unsigned short bufsize;
-
-
-   CLOG_SAVE_TIME(arg.logData.logTime);
-
-   arg.logData.logId = logId;
-   arg.logData.argType = LOG_ARG_STR;
-   arg.logData.logLevel = logLevel;
-   arg.logData.numOfArgs = 1;
-   arg.logData.len = strlen(str);
-   if(arg.logData.len > 0)
-   {
-      memcpy(arg.buf, (const void*)str, arg.logData.len);
-      bufsize = sizeof(LOGDATA)+arg.logData.len;
-
-      cmlog_save_log_data((const void*)&arg, bufsize, g_rlogPositionIndex++);	
+   for(int i = 0; i < hexlen; i++, p+=3, h++){
+	   sprintf(p, "%02x ", *h);
    }
 }
 
-void cmlogH( LOGID logId, os_clog_level_e logLevel, const char* hex, int hexlen, ...)
+void cmlogN(int logLevel, const char* modName, char* file, const char* func, int line, const char* fmtStr, ...)
 {
-   ARGDATA arg;
-   int bufsize;
+	va_list argList;
+	char szLog1[MAX_LOG_LEN] = {0};
+	char szLog2[MAX_LOG_LEN] = {0};
 
-   CLOG_SAVE_TIME(arg.logData.logTime);
+	snprintf(szLog1, MAX_LOG_LEN, "[%u][%s]%s:%s:%d %s:", numTtiTicks, modName, basename(file), func, line, g_logStr[logLevel]);
 
-   arg.logData.logId = logId;
-   arg.logData.argType = LOG_ARG_HEX;
-   arg.logData.logLevel = logLevel;
-   arg.logData.numOfArgs = 1;
-   arg.logData.len = hexlen;
+	va_start(argList,fmtStr);
+	vsnprintf(szLog2, MAX_LOG_LEN, fmtStr, argList);
+	va_end(argList);
 
-   memcpy(arg.buf, (const void*)hex, hexlen);
-   bufsize = sizeof(LOGDATA)+arg.logData.len;
-
-   cmlog_save_log_data((const void*)&arg, bufsize, g_rlogPositionIndex++);	
+	cmlog_save_log_data((const void*)szLog2, MAX_LOG_LEN, g_rlogPositionIndex++); 
 }
 
-void cmlogSP(LOGID logId, os_clog_level_e logLevel, os_clog_level_e splType, unsigned int splVal, unsigned int arg1, unsigned int arg2, unsigned int arg3, unsigned int arg4, ...)
+void cmlogSPN(int logLevel, const char* modName, char* file, const char* func, int line, log_sp_arg_e splType, unsigned int splVal, const char* fmtStr, ...)
 {
-   SPL_ARGDATA arg;
-   int bufsize;
+	va_list argList;
+	char szLog1[MAX_LOG_LEN] = {0};
+	char szLog2[MAX_LOG_LEN] = {0};
 
-   CLOG_SAVE_TIME(arg.logData.logTime);
+    snprintf(szLog1, MAX_LOG_LEN, "[%u][%s]%s:%s:%d %s:%s:%d:", numTtiTicks, modName, basename(file), func, line, g_logStr[logLevel], g_splStr[splType].name, splVal);
 
-   arg.logData.logId = logId;
-   arg.logData.argType = LOG_ARG_SPL;
-   arg.logData.logLevel = logLevel;
-   if( arg1 ) {
-      arg.logData.numOfArgs = (arg2 == 0 ) ? 1 : (arg3==0 ? 2 : (arg4==0 ? 3 : 4));
-   } else {
-      arg.logData.numOfArgs = 0;
-   }
+    va_start(argList,fmtStr);
+    vsnprintf(szLog2, MAX_LOG_LEN, fmtStr, argList);
+    va_end(argList);
 
-   arg.logData.len  = sizeof(unsigned char) + sizeof(unsigned int) + (sizeof(unsigned int)*arg.logData.numOfArgs);
-
-   arg.splEnum = splType;
-   arg.splArg = splVal;
-   arg.arg1 = arg1;
-   arg.arg2 = arg2;
-   arg.arg3 = arg3;
-   arg.arg4 = arg4;
-
-   bufsize = sizeof(LOGDATA)+arg.logData.len;
-
-   cmlog_save_log_data((const void*)&arg, bufsize, g_rlogPositionIndex++);	
+	cmlog_save_log_data((const void*)szLog2, MAX_LOG_LEN, g_rlogPositionIndex++); 
 }
 
-void cmlog0( LOGID logId, os_clog_level_e logLevel, ...)
+void cmlogH(int logLevel, const char* modName, char* file, const char* func, int line, const char* fmtStr, const char* hexdump, int hexlen, ...)
 {
-   //LOGDATA logData;
-   ARG4DATA arg;
+	char szHex[MAX_LOG_BUF_SIZE*3] = {0};
+	char szLog[MAX_LOG_LEN] = {0};
 
-   CLOG_SAVE_TIME(arg.logData.logTime);
+	cmlog_hex_to_asii(szHex, hexdump, hexlen);
+	snprintf(szLog, MAX_LOG_LEN, fmtStr, numTtiTicks, modName, basename(file), func, line, g_logStr[logLevel], szHex);
 
-   arg.logData.logId = logId;
-   arg.logData.argType = LOG_ARG_STR;
-   arg.logData.logLevel = logLevel;
-   arg.logData.numOfArgs = 0;
-   arg.logData.len = 0;
-
-   cmlog_save_log_data((const void*)&arg, sizeof(LOGDATA), g_rlogPositionIndex++);	
+	cmlog_save_log_data((const void*)szLog, MAX_LOG_LEN, g_rlogPositionIndex++); 
 }
 
-void cmlog1( LOGID logId, os_clog_level_e logLevel, unsigned int arg1, ...)
-{
-   ARG4DATA arg;
-   int bufsize;
-
-   CLOG_SAVE_TIME(arg.logData.logTime);
-
-   arg.logData.logId = logId;
-   arg.logData.argType = LOG_ARG_INT;
-   arg.logData.logLevel = logLevel;
-   arg.logData.numOfArgs = 1;
-   arg.logData.len = sizeof(unsigned int);
-
-   arg.arg1 = arg1;
-   bufsize = sizeof(LOGDATA)+arg.logData.len;
-
-   cmlog_save_log_data((const void*)&arg, bufsize, g_rlogPositionIndex++);	
-}
-void cmlog2( LOGID logId, os_clog_level_e logLevel, unsigned int arg1, unsigned int arg2, ...)
-{
-   ARG4DATA arg;
-   int bufsize;
-
-   CLOG_SAVE_TIME(arg.logData.logTime);
-
-   arg.logData.logId = logId;
-   arg.logData.argType = LOG_ARG_INT;
-   arg.logData.logLevel = logLevel;
-   arg.logData.numOfArgs = 2;
-   arg.logData.len =  2 * sizeof(unsigned int);
-
-   arg.arg1 = arg1;
-   arg.arg2 = arg2;
-
-   bufsize = sizeof(LOGDATA)+arg.logData.len;
-
-   cmlog_save_log_data((const void*)&arg, bufsize, g_rlogPositionIndex++);	
-}
-void cmlog3( LOGID logId, os_clog_level_e logLevel, unsigned int arg1, unsigned int arg2, unsigned int arg3, ...)
-{
-   ARG4DATA arg;
-   int bufsize;
-
-   CLOG_SAVE_TIME(arg.logData.logTime);
-
-   arg.logData.logId = logId;
-   arg.logData.argType = LOG_ARG_INT;
-   arg.logData.logLevel = logLevel;
-   arg.logData.numOfArgs = 3;
-   arg.logData.len = 3 * sizeof(unsigned int);
-
-   arg.arg1 = arg1;
-   arg.arg2 = arg2;
-   arg.arg3 = arg3;
-
-   bufsize = sizeof(LOGDATA)+arg.logData.len;
-
-   cmlog_save_log_data((const void*)&arg, bufsize, g_rlogPositionIndex++);	
-}
-void cmlog4( LOGID logId, os_clog_level_e logLevel, unsigned int arg1, unsigned int arg2, unsigned int arg3, unsigned int arg4, ...)
-{
-   ARG4DATA arg;
-
-   CLOG_SAVE_TIME(arg.logData.logTime);
-
-   arg.logData.logId = logId;
-   arg.logData.argType = LOG_ARG_INT;
-   arg.logData.logLevel = logLevel;
-   arg.logData.numOfArgs = 4;
-   arg.logData.len = 4 * sizeof(unsigned int);
-
-   arg.arg1 = arg1;
-   arg.arg2 = arg2;
-   arg.arg3 = arg3;
-   arg.arg4 = arg4;
-
-   cmlog_save_log_data((const void*)&arg, sizeof(ARG4DATA), g_rlogPositionIndex++);	
-}
 

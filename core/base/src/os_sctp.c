@@ -18,7 +18,7 @@ int os_sctp_recvdata(os_sock_t *sock, void *msg, size_t len,
     do {
         size = os_sctp_recvmsg(sock, msg, len, from, sinfo, &flags);
         if (size < 0) {
-           os_logp1(ERROR, ERRNOID, os_socket_errno, "os_sctp_recvdata(%d)", size);
+           	os_logsp(ERROR, ERRNOID, os_socket_errno, "os_sctp_recvdata(%d)", size);
             return size;
         }
 
@@ -28,51 +28,51 @@ int os_sctp_recvdata(os_sock_t *sock, void *msg, size_t len,
 	
 			switch(not->sn_header.sn_type) {
 			case SCTP_ASSOC_CHANGE :
-				os_log3(DEBUG, "SCTP_ASSOC_CHANGE:[T:%d, F:0x%x, S:%d]", 
+				os_log(DEBUG, "SCTP_ASSOC_CHANGE:"
+						"[T:%d, F:0x%x, S:%d, I/O:%d/%d]", 
 						not->sn_assoc_change.sac_type,
 						not->sn_assoc_change.sac_flags,
-						not->sn_assoc_change.sac_state);
-				os_log2(DEBUG, "SCTP_ASSOC_CHANGE:[I/O:%d/%d]",
+						not->sn_assoc_change.sac_state,
 						not->sn_assoc_change.sac_inbound_streams,
 						not->sn_assoc_change.sac_outbound_streams);
 
 				if (not->sn_assoc_change.sac_state == SCTP_COMM_UP) {
-					os_log0(DEBUG, "SCTP_COMM_UP");
+					os_log(DEBUG, "SCTP_COMM_UP");
 				} else if (not->sn_assoc_change.sac_state == SCTP_SHUTDOWN_COMP ||
 						not->sn_assoc_change.sac_state == SCTP_COMM_LOST) {
 	
 					if (not->sn_assoc_change.sac_state == SCTP_SHUTDOWN_COMP)
-						os_log0(DEBUG, "SCTP_SHUTDOWN_COMP");
+						os_log(DEBUG, "SCTP_SHUTDOWN_COMP");
 					if (not->sn_assoc_change.sac_state == SCTP_COMM_LOST)
-						os_log0(DEBUG, "SCTP_COMM_LOST");
+						os_log(DEBUG, "SCTP_COMM_LOST");
 				}
 				break;
 			case SCTP_SHUTDOWN_EVENT :
-				os_log3(DEBUG, "SCTP_SHUTDOWN_EVENT:[T:%d, F:0x%x, L:%d]",
+				os_log(DEBUG, "SCTP_SHUTDOWN_EVENT:[T:%d, F:0x%x, L:%d]",
 						not->sn_shutdown_event.sse_type,
 						not->sn_shutdown_event.sse_flags,
 						not->sn_shutdown_event.sse_length);
 				break;
 			case SCTP_SEND_FAILED :
-				os_log3(ERROR, "SCTP_SEND_FAILED:[T:%d, F:0x%x, S:%d]",
+				os_log(ERROR, "SCTP_SEND_FAILED:[T:%d, F:0x%x, S:%d]",
 						not->sn_send_failed.ssf_type,
 						not->sn_send_failed.ssf_flags,
 						not->sn_send_failed.ssf_error);
 				break;
 			case SCTP_PEER_ADDR_CHANGE:
-				os_log3(WARN, "SCTP_PEER_ADDR_CHANGE:[T:%d, F:0x%x, S:%d]", 
+				os_log(WARN, "SCTP_PEER_ADDR_CHANGE:[T:%d, F:0x%x, S:%d]", 
 						not->sn_paddr_change.spc_type,
 						not->sn_paddr_change.spc_flags,
 						not->sn_paddr_change.spc_error);
 				break;
 			case SCTP_REMOTE_ERROR:
-				os_log3(WARN, "SCTP_REMOTE_ERROR:[T:%d, F:0x%x, S:%d]", 
+				os_log(WARN, "SCTP_REMOTE_ERROR:[T:%d, F:0x%x, S:%d]", 
 						not->sn_remote_error.sre_type,
 						not->sn_remote_error.sre_flags,
 						not->sn_remote_error.sre_error);
 				break;
 			default :
-				os_log2(ERROR, "Discarding event with unknown flags:0x%x type:0x%x",
+				os_log(ERROR, "Discarding event with unknown flags:0x%x type:0x%x",
 						flags, not->sn_header.sn_type);
 				break;
 			}
@@ -100,7 +100,7 @@ int os_sctp_senddata(os_sock_t *sock,
     sent = os_sctp_sendmsg(sock, buf->data, buf->len, addr,
             os_sctp_ppid_in_buf(buf), os_sctp_stream_no_in_buf(buf));
     if (sent < 0 || sent != buf->len) {
-        os_logp2(ERROR, ERRNOID, os_socket_errno, "os_sctp_senddata(len:%d,ssn:%d)", buf->len, (int)os_sctp_stream_no_in_buf(buf));
+        os_logsp(ERROR, ERRNOID, os_socket_errno, "os_sctp_senddata(len:%d,ssn:%d)", buf->len, (int)os_sctp_stream_no_in_buf(buf));
         os_buf_free(buf);
         return OS_ERROR;
     }

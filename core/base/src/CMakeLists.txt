@@ -1,35 +1,35 @@
 ﻿cmake_minimum_required(VERSION 3.00)
 
 set(SRC_FILES
-    cJSON.c
-    cJSON_Utils.c
-    sqlite3.c
-    os_abort.c
-    os_errno.c
-    os_str.c
-    os_time.c
-    os_cdlog.c
+	cJSON.c
+	cJSON_Utils.c
+	sqlite3.c
+	os_abort.c
+	os_errno.c
+	os_str.c
+	os_time.c
+	os_cdlog.c
 	os_ctlog.c
 	os_cmlog.c
-    os_list.c
-    os_hash.c
-    os_buf.c
-    os_mem.c
-    os_rbtree.c
-    os_random.c
-    os_sockopt.c
-    os_sockaddr.c
-    os_socket.c
-    os_sockpair.c
-    os_socknode.c
-    os_sctp.c
-    os_lksctp.c
-    #os_kqueue.c
-    os_epoll.c
-    os_select.c
-    os_poll.c
-    os_notify.c
-    os_init.c
+	os_list.c
+	os_hash.c
+	os_buf.c
+	os_mem.c
+	os_rbtree.c
+	os_random.c
+	os_sockopt.c
+	os_sockaddr.c
+	os_socket.c
+	os_sockpair.c
+	os_socknode.c
+	os_sctp.c
+	os_lksctp.c
+	#os_kqueue.c
+	os_epoll.c
+	os_select.c
+	os_poll.c
+	os_notify.c
+	os_init.c
 )
 
 #######################os base config##############################		

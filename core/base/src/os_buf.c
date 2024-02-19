@@ -165,13 +165,11 @@ os_buf_pool_t *os_buf_pool_create(os_buf_config_t *config)
 #define os_buf_pool_final(pool) do { \
     if (((pool)->size != (pool)->avail)) { \
         int i; \
-        os_logs(ERROR, ">>>%s", (pool)->name); \
-		os_log2(ERROR, "%d in '[%d]' were not released<<<", (pool)->size - (pool)->avail, (pool)->size); \
+		os_log(ERROR, "%d in '%s[%d]' were not released", (pool)->size - (pool)->avail, (pool)->name, (pool)->size); \
         for (i = 0; i < (pool)->size; i++) { \
             os_buf_t *buf = (pool)->index[i]; \
             if (buf) { \
-				os_logs(ERROR, ">>>(%s)", buf->file_line); \
-				os_log1(ERROR, "SIZE[%d] is not freed<<<", buf->len); \
+				os_log(ERROR, "SIZE[%d] is not freed. (%s)\n", buf->len, buf->file_line); \
             } \
         } \
     } \
@@ -213,7 +211,7 @@ os_buf_t *os_buf_alloc_debug(
 
     buf = os_talloc_zero_size(__os_talloc_core, sizeof(*buf) + size, file_line);//pool
     if (!buf) {
-        os_log1(ERROR, "os_buf_alloc() failed [size=%d]", size);
+        os_log(ERROR, "os_buf_alloc() failed [size=%d]", size);
         return NULL;
     }
 
@@ -240,14 +238,14 @@ os_buf_t *os_buf_alloc_debug(
 
     cluster = cluster_alloc(pool, size);
     if (!cluster) {
-        os_log1(ERROR, "os_buf_alloc() failed [size=%d]", size);
+        os_log(ERROR, "os_buf_alloc() failed [size=%d]", size);
         os_thread_mutex_unlock(&pool->mutex);
         return NULL;
     }
 
     os_pool_alloc(&pool->buf, &buf);
     if (!buf) {
-        os_log1(ERROR, "os_buf_alloc() failed [size=%d]", size);
+        os_log(ERROR, "os_buf_alloc() failed [size=%d]", size);
         os_thread_mutex_unlock(&pool->mutex);
         return NULL;
     }
@@ -317,15 +315,14 @@ os_buf_t *os_buf_copy_debug(os_buf_t *buf, const char *file_line)
     os_assert(buf);
     size = buf->end - buf->head;
     if (size <= 0) {
-		os_logs(ERROR, ">>>%s", file_line); \
-        os_log1(ERROR, "Invalid argument[size=%d]<<<", size);
+        os_log(ERROR, "Invalid argument[size=%d, head=%p, end=%p] in (%s)", size, buf->head, buf->end, file_line);
         return NULL;
     }
 
 #if OS_USE_TALLOC == 1
     newbuf = os_buf_alloc_debug(NULL, size, file_line);
     if (!newbuf) {
-        os_log1(ERROR, "os_buf_alloc() failed [size=%d]", size);
+        os_log(ERROR, "os_buf_alloc() failed [size=%d]", size);
         return NULL;
     }
 
@@ -347,7 +344,7 @@ os_buf_t *os_buf_copy_debug(os_buf_t *buf, const char *file_line)
 
     os_pool_alloc(&pool->buf, &newbuf);
     if (!newbuf) {
-        os_log1(ERROR, "os_buf_copy() failed [size=%d]", size);
+        os_log(ERROR, "os_buf_copy() failed [size=%d]", size);
         os_thread_mutex_unlock(&pool->mutex);
         return NULL;
     }
@@ -377,75 +374,75 @@ PRIVATE os_cluster_t *cluster_alloc(
     if (size <= OS_CLUSTER_128_SIZE) {
         os_pool_alloc(&pool->cluster_128, (os_cluster_128_t**)&buffer);
         if (!buffer) {
-            os_log0(ERROR, "os_pool_alloc() failed");
+            os_log(ERROR, "os_pool_alloc() failed");
             return NULL;
         }
         cluster->size = OS_CLUSTER_128_SIZE;
     } else if (size <= OS_CLUSTER_256_SIZE) {
         os_pool_alloc(&pool->cluster_256, (os_cluster_256_t**)&buffer);
         if (!buffer) {
-            os_log0(ERROR, "os_pool_alloc() failed");
+            os_log(ERROR, "os_pool_alloc() failed");
             return NULL;
         }
         cluster->size = OS_CLUSTER_256_SIZE;
     } else if (size <= OS_CLUSTER_512_SIZE) {
         os_pool_alloc(&pool->cluster_512, (os_cluster_512_t**)&buffer);
         if (!buffer) {
-            os_log0(ERROR, "os_pool_alloc() failed");
+            os_log(ERROR, "os_pool_alloc() failed");
             return NULL;
         }
         cluster->size = OS_CLUSTER_512_SIZE;
     } else if (size <= OS_CLUSTER_1024_SIZE) {
         os_pool_alloc(&pool->cluster_1024, (os_cluster_1024_t**)&buffer);
         if (!buffer) {
-            os_log0(ERROR, "os_pool_alloc() failed");
+            os_log(ERROR, "os_pool_alloc() failed");
             return NULL;
         }
         cluster->size = OS_CLUSTER_1024_SIZE;
     } else if (size <= OS_CLUSTER_2048_SIZE) {
         os_pool_alloc(&pool->cluster_2048, (os_cluster_2048_t**)&buffer);
         if (!buffer) {
-            os_log0(ERROR, "os_pool_alloc() failed");
+            os_log(ERROR, "os_pool_alloc() failed");
             return NULL;
         }
         cluster->size = OS_CLUSTER_2048_SIZE;
     } else if (size <= OS_CLUSTER_8192_SIZE) {
         os_pool_alloc(&pool->cluster_8192, (os_cluster_8192_t**)&buffer);
         if (!buffer) {
-            os_log0(ERROR, "os_pool_alloc() failed");
+            os_log(ERROR, "os_pool_alloc() failed");
             return NULL;
         }
         cluster->size = OS_CLUSTER_8192_SIZE;
     } else if (size <= OS_CLUSTER_32768_SIZE) {
         os_pool_alloc(&pool->cluster_32768, (os_cluster_32768_t**)&buffer);
         if (!buffer) {
-            os_log0(ERROR, "os_pool_alloc() failed");
+            os_log(ERROR, "os_pool_alloc() failed");
             return NULL;
         }
         cluster->size = OS_CLUSTER_32768_SIZE;
     } else if (size <= OS_CLUSTER_LIL_SIZE) {
         os_pool_alloc(&pool->cluster_lil, (os_cluster_lil_t**)&buffer);
         if (!buffer) {
-            os_log0(ERROR, "os_pool_alloc() failed");
+            os_log(ERROR, "os_pool_alloc() failed");
             return NULL;
         }
         cluster->size = OS_CLUSTER_LIL_SIZE;
     }else if (size <= OS_CLUSTER_MID_SIZE) {
         os_pool_alloc(&pool->cluster_mid, (os_cluster_mid_t**)&buffer);
         if (!buffer) {
-            os_log0(ERROR, "os_pool_alloc() failed");
+            os_log(ERROR, "os_pool_alloc() failed");
             return NULL;
         }
         cluster->size = OS_CLUSTER_MID_SIZE;
     }  else if (size <= OS_CLUSTER_BIG_SIZE) {
         os_pool_alloc(&pool->cluster_big, (os_cluster_big_t**)&buffer);
         if (!buffer) {
-            os_log0(ERROR, "os_pool_alloc() failed");
+            os_log(ERROR, "os_pool_alloc() failed");
             return NULL;
         }
         cluster->size = OS_CLUSTER_BIG_SIZE;
     } else {
-        os_log1(FATAL, "invalid size = %d", size);
+        os_log(FATAL, "invalid size = %d", size);
         os_assert_if_reached();
     }
     cluster->buffer = buffer;
@@ -581,7 +578,7 @@ int os_buf_trim(os_buf_t *buf, int len)
     if (os_unlikely(len < 0))
         os_assert_if_reached();
     if (os_unlikely(len > buf->len)) {
-        os_log2(ERROR, "len(%d) > buf->len(%d)", len, buf->len);
+        os_log(ERROR, "len(%d) > buf->len(%d)", len, buf->len);
         return OS_ERROR;
     }
 

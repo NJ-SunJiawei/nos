@@ -24,7 +24,7 @@ os_sock_t *os_sctp_socket(int family, int type)
 
     new = os_sock_socket(family, type, IPPROTO_SCTP);
     if (!new) {
-        os_logp2(ERROR, ERRNOID, os_socket_errno, "os_sock_socket(family:%d type:%d) failed", family, type);
+        os_logsp(ERROR, ERRNOID, os_socket_errno, "os_sock_socket(family:%d type:%d) failed", family, type);
         return NULL;
     }
 
@@ -69,7 +69,7 @@ os_sock_t *os_sctp_server(int type, os_sockaddr_t *sa_list, os_sockopt_t *socket
                 rv = os_sctp_nodelay(new, true);
                 os_assert(rv == OS_OK);
             } else
-                os_log0(WARN,"SCTP NO_DELAY Disabled");
+                os_log(WARN,"SCTP NO_DELAY Disabled");
 
             if (option.so_linger.l_onoff == true) {
                 rv = os_sctp_so_linger(new, option.so_linger.l_linger);
@@ -80,8 +80,7 @@ os_sock_t *os_sctp_server(int type, os_sockaddr_t *sa_list, os_sockopt_t *socket
             os_assert(rv == OS_OK);
 
             if (os_sock_bind(new, addr) == OS_OK) {
-				os_logs(DEBUG, "sctp_server() %s", OS_ADDR(addr, buf));
-				os_log1(DEBUG, "sctp_server() %d", OS_PORT(addr));
+                os_log(DEBUG, "sctp_server() [%s]:%d", OS_ADDR(addr, buf), OS_PORT(addr));
                 break;
             }
 
@@ -92,8 +91,7 @@ os_sock_t *os_sctp_server(int type, os_sockaddr_t *sa_list, os_sockopt_t *socket
     }
 
     if (addr == NULL) {
-		os_logs(ERROR ,">>>sctp_server() [%s]", OS_ADDR(sa_list, buf));
-        os_logp1(ERROR, ERRNOID, os_socket_errno,"sctp_server() %d failed<<<", OS_PORT(sa_list));
+        os_logsp(ERROR, ERRNOID, os_socket_errno, "sctp_server() [%s]:%d failed", OS_ADDR(sa_list, buf), OS_PORT(sa_list));
         return NULL;
     }
 
@@ -137,7 +135,7 @@ os_sock_t *os_sctp_client(int type, os_sockaddr_t *sa_list, os_sockopt_t *socket
                 rv = os_sctp_nodelay(new, true);
                 os_assert(rv == OS_OK);
             } else
-                os_log0(WARN, "SCTP NO_DELAY Disabled");
+                os_log(WARN, "SCTP NO_DELAY Disabled");
 
             if (option.so_linger.l_onoff == true) {
                 rv = os_sctp_so_linger(new, option.so_linger.l_linger);
@@ -145,9 +143,7 @@ os_sock_t *os_sctp_client(int type, os_sockaddr_t *sa_list, os_sockopt_t *socket
             }
 
             if (os_sock_connect(new, addr) == OS_OK) {
-				os_logs(DEBUG, "sctp_client() %s", OS_ADDR(addr, buf));
-				os_log1(DEBUG, "sctp_client() %d", OS_PORT(addr));
-
+                os_log(DEBUG, "sctp_client() [%s]:%d", OS_ADDR(addr, buf), OS_PORT(addr));
                 break;
             }
 
@@ -158,9 +154,7 @@ os_sock_t *os_sctp_client(int type, os_sockaddr_t *sa_list, os_sockopt_t *socket
     }
 
     if (addr == NULL) {
-		os_logs(ERROR ,">>>sctp_client() [%s]", OS_ADDR(sa_list, buf));
-        os_logp1(ERROR, ERRNOID, os_socket_errno,"sctp_client() %d failed<<<", OS_PORT(sa_list));
-
+        os_logsp(ERROR, ERRNOID, os_socket_errno, "sctp_client() [%s]:%d failed", OS_ADDR(sa_list, buf), OS_PORT(sa_list));
         return NULL;
     }
 
@@ -179,8 +173,7 @@ int os_sctp_connect(os_sock_t *sock, os_sockaddr_t *sa_list)
     addr = sa_list;
     while (addr) {
         if (os_sock_connect(sock, addr) == OS_OK) {
-			os_logs(DEBUG, "sctp_connect() %s", OS_ADDR(addr, buf));
-			os_log1(DEBUG, "sctp_connect() %d", OS_PORT(addr));
+            os_log(DEBUG, "sctp_connect() [%s]:%d", OS_ADDR(addr, buf), OS_PORT(addr));
             break;
         }
 
@@ -188,9 +181,7 @@ int os_sctp_connect(os_sock_t *sock, os_sockaddr_t *sa_list)
     }
 
     if (addr == NULL) {
-		os_logs(ERROR ,">>>sctp_connect() [%s]", OS_ADDR(sa_list, buf));
-        os_logp1(ERROR, ERRNOID, os_socket_errno,"sctp_connect() %d failed<<<", OS_PORT(sa_list));
-
+		os_logsp(ERROR, ERRNOID, os_socket_errno, "sctp_connect() [%s]:%d failed", OS_ADDR(sa_list, buf), OS_PORT(sa_list));
         return OS_ERROR;
     }
 
@@ -231,7 +222,7 @@ int os_sctp_recvmsg(os_sock_t *sock, void *msg, size_t len, os_sockaddr_t *from,
     size = sctp_recvmsg(sock->fd, msg, len, &addr.sa, &addrlen,
                 &sndrcvinfo, &flags);
     if (size < 0) {
-        os_logp1(ERROR, ERRNOID, os_socket_errno, "sctp_recvmsg(%d) failed", size);
+        os_logsp(ERROR, ERRNOID, os_socket_errno, "sctp_recvmsg(%d) failed", size);
         return size;
     }
 
@@ -285,13 +276,13 @@ PRIVATE int determine_sctp_sockopt_event_subscribe_size(void)
     rc = getsockopt(sd, IPPROTO_SCTP, SCTP_EVENTS, buf, &buf_len);
     os_closesocket(sd);
     if (rc < 0) {
-        os_logp1(ERROR, ERRNOID, os_socket_errno, "getsockopt(SCTP_PEER_ADDR_PARAMS) failed [%d]", rc);
+        os_logsp(ERROR, ERRNOID, os_socket_errno, "getsockopt(SCTP_PEER_ADDR_PARAMS) failed [%d]", rc);
         return rc;
     }
 
     sctp_sockopt_event_subscribe_size = buf_len;
 
-	os_log2(DEBUG, "sizes of 'struct sctp_event_subscribe': "
+	os_log(DEBUG, "sizes of 'struct sctp_event_subscribe': "
             "compile-time %zu, kernel: %u",
             sizeof(struct sctp_event_subscribe),
             sctp_sockopt_event_subscribe_size);
@@ -324,7 +315,7 @@ PRIVATE int sctp_setsockopt_event_subscribe_workaround(
     int rc;
 
     if (determine_sctp_sockopt_event_subscribe_size() < 0) {
-        os_log0(ERROR, "Cannot determine SCTP_EVENTS socket option size");
+        os_log(ERROR, "Cannot determine SCTP_EVENTS socket option size");
         return OS_ERROR;
     }
 
@@ -350,7 +341,7 @@ PRIVATE int sctp_setsockopt_event_subscribe_workaround(
         rc = byte_nonzero((const uint8_t *)event_subscribe,
                 sctp_sockopt_event_subscribe_size, compiletime_size);
         if (rc >= 0) {
-            os_log2(ERROR, "Kernel only supports sctp_event_subscribe of %u bytes, "
+            os_log(ERROR, "Kernel only supports sctp_event_subscribe of %u bytes, "
                 "but caller tried to enable more modern event at offset %u",
                 sctp_sockopt_event_subscribe_size, rc);
             return OS_ERROR;
@@ -376,13 +367,13 @@ PRIVATE int subscribe_to_events(os_sock_t *sock)
 #ifdef DISABLE_SCTP_EVENT_WORKAROUND
     if (setsockopt(sock->fd, IPPROTO_SCTP, SCTP_EVENTS,
                     &event_subscribe, sizeof(event_subscribe)) != 0) {
-        os_logp0(ERROR, ERRNOID, os_socket_errno, "setsockopt(SCTP_EVENTS) failed");
+        os_logsp(ERROR, ERRNOID, os_socket_errno, "setsockopt(SCTP_EVENTS) failed");
         return OS_ERROR;
     }
 #else
     if (sctp_setsockopt_event_subscribe_workaround(
                 sock->fd, &event_subscribe) < 0) {
-        os_log0(ERROR, "sctp_setsockopt_events_linux_workaround() failed");
+        os_log(ERROR, "sctp_setsockopt_events_linux_workaround() failed");
         return OS_ERROR;
     }
 #endif
@@ -410,13 +401,13 @@ PRIVATE int determine_sctp_sockopt_paddrparams_size(void)
     rc = getsockopt(sd, IPPROTO_SCTP, SCTP_PEER_ADDR_PARAMS, buf, &buf_len);
     os_closesocket(sd);
     if (rc < 0) {
-        os_logp1(ERROR, ERRNOID, os_socket_errno, "getsockopt(SCTP_PEER_ADDR_PARAMS) failed [%d]", rc);
+        os_logsp(ERROR, ERRNOID, os_socket_errno, "getsockopt(SCTP_PEER_ADDR_PARAMS) failed [%d]", rc);
         return rc;
     }
 
     sctp_sockopt_paddrparams_size = buf_len;
 
-	os_log2(DEBUG, "sizes of 'struct sctp_paddrparams': "
+	os_log(DEBUG, "sizes of 'struct sctp_paddrparams': "
             "compile-time %zu, kernel: %u",
             sizeof(struct sctp_paddrparams),
             sctp_sockopt_paddrparams_size);
@@ -431,7 +422,7 @@ PRIVATE int sctp_setsockopt_paddrparams_workaround(
     int rc;
 
     if (determine_sctp_sockopt_paddrparams_size() < 0) {
-        os_log0(ERROR, "Cannot determine SCTP_PEER_ADDR_PARAMS socket option size");
+        os_log(ERROR, "Cannot determine SCTP_PEER_ADDR_PARAMS socket option size");
         return OS_ERROR;
     }
 
@@ -457,7 +448,7 @@ PRIVATE int sctp_setsockopt_paddrparams_workaround(
         rc = byte_nonzero((const uint8_t *)paddrparams,
                 sctp_sockopt_paddrparams_size, compiletime_size);
         if (rc >= 0) {
-            os_log2(ERROR, "Kernel only supports sctp_paddrparams of %u bytes, "
+            os_log(ERROR, "Kernel only supports sctp_paddrparams of %u bytes, "
                 "but caller tried to enable more modern event at offset %u",
                 sctp_sockopt_paddrparams_size, rc);
             return OS_ERROR;
@@ -480,18 +471,18 @@ int os_sctp_peer_addr_params(os_sock_t *sock, os_sockopt_t *option)
     socklen = sizeof(paddrparams);
     if (getsockopt(sock->fd, IPPROTO_SCTP, SCTP_PEER_ADDR_PARAMS,
                             &paddrparams, &socklen) != 0) {
-        os_logp0(ERROR, ERRNOID, os_socket_errno, "getsockopt(SCTP_PEER_ADDR) failed");
+        os_logsp(ERROR, ERRNOID, os_socket_errno, "getsockopt(SCTP_PEER_ADDR) failed");
         return OS_ERROR;
     }
 
 #if !defined(__FreeBSD__)
-	os_log4(DEBUG, "OLD spp_flags = 0x%x hbinter = %d pathmax = %d, sackdelay = %d",
+	os_log(DEBUG, "OLD spp_flags = 0x%x hbinter = %d pathmax = %d, sackdelay = %d",
             paddrparams.spp_flags,
             paddrparams.spp_hbinterval,
             paddrparams.spp_pathmaxrxt,
             paddrparams.spp_sackdelay);
 #else
-	os_log3(DEBUG, "OLD spp_flags = 0x%x hbinter = %d pathmax = %d",
+	os_log(DEBUG, "OLD spp_flags = 0x%x hbinter = %d pathmax = %d",
             paddrparams.spp_flags,
             paddrparams.spp_hbinterval,
             paddrparams.spp_pathmaxrxt);
@@ -506,24 +497,24 @@ int os_sctp_peer_addr_params(os_sock_t *sock, os_sockopt_t *option)
 #ifdef DISABLE_SCTP_EVENT_WORKAROUND
     if (setsockopt(sock->fd, IPPROTO_SCTP, SCTP_PEER_ADDR_PARAMS,
                             &paddrparams, sizeof(paddrparams)) != 0) {
-        os_logp0(ERROR, ERRNOID, os_socket_errno, "setsockopt(SCTP_PEER_ADDR_PARAMS) failed");
+        os_logsp(ERROR, ERRNOID, os_socket_errno, "setsockopt(SCTP_PEER_ADDR_PARAMS) failed");
         return OS_ERROR;
     }
 #else
     if (sctp_setsockopt_paddrparams_workaround(sock->fd, &paddrparams) < 0) {
-        os_log0(ERROR, "sctp_setsockopt_paddrparams_workaround() failed");
+        os_log(ERROR, "sctp_setsockopt_paddrparams_workaround() failed");
         return OS_ERROR;
     }
 #endif
 
 #if !defined(__FreeBSD__)
-	os_log4(DEBUG, "NEW spp_flags = 0x%x hbinter = %d pathmax = %d, sackdelay = %d",
+	os_log(DEBUG, "NEW spp_flags = 0x%x hbinter = %d pathmax = %d, sackdelay = %d",
             paddrparams.spp_flags,
             paddrparams.spp_hbinterval,
             paddrparams.spp_pathmaxrxt,
             paddrparams.spp_sackdelay);
 #else
-	os_log3(DEBUG, "NEW spp_flags = 0x%x hbinter = %d pathmax = %d",
+	os_log(DEBUG, "NEW spp_flags = 0x%x hbinter = %d pathmax = %d",
             paddrparams.spp_flags,
             paddrparams.spp_hbinterval,
             paddrparams.spp_pathmaxrxt);
@@ -545,11 +536,11 @@ int os_sctp_rto_info(os_sock_t *sock, os_sockopt_t *option)
     socklen = sizeof(rtoinfo);
     if (getsockopt(sock->fd, IPPROTO_SCTP, SCTP_RTOINFO,
                             &rtoinfo, &socklen) != 0) {
-        os_logp0(ERROR, ERRNOID, os_socket_errno, "getsockopt for SCTP_RTOINFO failed");
+        os_logsp(ERROR, ERRNOID, os_socket_errno, "getsockopt for SCTP_RTOINFO failed");
         return OS_ERROR;
     }
 
-	os_log3(DEBUG, "OLD RTO (initial:%d max:%d min:%d)",
+	os_log(DEBUG, "OLD RTO (initial:%d max:%d min:%d)",
             rtoinfo.srto_initial,
             rtoinfo.srto_max,
             rtoinfo.srto_min);
@@ -560,11 +551,11 @@ int os_sctp_rto_info(os_sock_t *sock, os_sockopt_t *option)
 
     if (setsockopt(sock->fd, IPPROTO_SCTP, SCTP_RTOINFO,
                             &rtoinfo, sizeof(rtoinfo)) != 0) {
-        os_logp0(ERROR, ERRNOID, os_socket_errno, "setsockopt for SCTP_RTOINFO failed");
+        os_logsp(ERROR, ERRNOID, os_socket_errno, "setsockopt for SCTP_RTOINFO failed");
         return OS_ERROR;
     }
 
-	os_log3(DEBUG, "New RTO (initial:%d max:%d min:%d)",
+	os_log(DEBUG, "New RTO (initial:%d max:%d min:%d)",
             rtoinfo.srto_initial,
             rtoinfo.srto_max,
             rtoinfo.srto_min);
@@ -585,11 +576,11 @@ int os_sctp_initmsg(os_sock_t *sock, os_sockopt_t *option)
     socklen = sizeof(initmsg);
     if (getsockopt(sock->fd, IPPROTO_SCTP, SCTP_INITMSG,
                             &initmsg, &socklen) != 0) {
-        os_logp0(ERROR, ERRNOID, os_socket_errno, "getsockopt for SCTP_INITMSG failed");
+        os_logsp(ERROR, ERRNOID, os_socket_errno, "getsockopt for SCTP_INITMSG failed");
         return OS_ERROR;
     }
 
-	os_log4(DEBUG, "Old INITMSG (numout:%d maxin:%d maxattempt:%d maxinit_to:%d)",
+	os_log(DEBUG, "Old INITMSG (numout:%d maxin:%d maxattempt:%d maxinit_to:%d)",
                 initmsg.sinit_num_ostreams,
                 initmsg.sinit_max_instreams,
                 initmsg.sinit_max_attempts,
@@ -602,11 +593,11 @@ int os_sctp_initmsg(os_sock_t *sock, os_sockopt_t *option)
 
     if (setsockopt(sock->fd, IPPROTO_SCTP, SCTP_INITMSG,
                             &initmsg, sizeof(initmsg)) != 0) {
-       os_logp0(ERROR, ERRNOID, os_socket_errno, "setsockopt for SCTP_INITMSG failed");
+       	os_logsp(ERROR, ERRNOID, os_socket_errno, "setsockopt for SCTP_INITMSG failed");
         return OS_ERROR;
     }
 
-	os_log4(DEBUG, "New INITMSG (numout:%d maxin:%d maxattempt:%d maxinit_to:%d)",
+	os_log(DEBUG, "New INITMSG (numout:%d maxin:%d maxattempt:%d maxinit_to:%d)",
                 initmsg.sinit_num_ostreams,
                 initmsg.sinit_max_instreams,
                 initmsg.sinit_max_attempts,
@@ -619,10 +610,10 @@ int os_sctp_nodelay(os_sock_t *sock, int on)
 {
     os_assert(sock);
 
-	os_log0(DEBUG, "Turn on SCTP_NODELAY");
+	os_log(DEBUG, "Turn on SCTP_NODELAY");
     if (setsockopt(sock->fd, IPPROTO_SCTP, SCTP_NODELAY,
                 &on, sizeof(on)) != 0) {
-        os_logp0(ERROR, ERRNOID, os_socket_errno, "setsockopt(IPPROTO_SCTP, SCTP_NODELAY) failed");
+        os_logsp(ERROR, ERRNOID, os_socket_errno, "setsockopt(IPPROTO_SCTP, SCTP_NODELAY) failed");
         return OS_ERROR;
     }
 
