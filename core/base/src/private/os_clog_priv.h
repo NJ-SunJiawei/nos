@@ -26,21 +26,22 @@ PRIVATE const char* g_logStr[MAX_LOG_LEVEL] = { "NONE", "FATAL", "ERROR", "WARN"
 #define MAX_FILENAME_LENGTH 	        700
 #define LOG_TIME_LEN 			        64
 #define MAX_LOG_BUF_SIZE 		        5000
-#define CLOG_MAX_CIRBUF_SIZE			(1024*100)
 #define CLOG_MAX_FILES		 			5
 #define CLOG_MAX_TIME_STAMP 			128
 #define CLOG_MAX_TAX_NAME				16
-#define CLOG_CIRBUF_READ_INTERVAL	    1	/*seconds read interval */
+#define CLOG_CIRBUF_READ_INTERVAL	    500	   /*ms */
 #define CLOG_MAX_THREADS				16
 #define CLOG_TIME_ZONE_LEN				8
 #define CLOG_MAX_STACK_DEPTH 		    24
 #define CLOG_MAX_BACKTRACE_BUFSZ	    2048
-#define CLOG_READ_POS_THRESHOLD         (MAX_LOG_LEN*6) //300
-#define CLOG_FIXED_LENGTH_BUFFER_SIZE   MAX_LOG_LEN     //50
+#define CLOG_FIXED_LENGTH_BUFFER_SIZE   MAX_LOG_LEN
+#define CLOG_FIXED_LENGTH_BUFFER_NUM    10240
+#define CLOG_READ_POS_THRESHOLD         (20*CLOG_FIXED_LENGTH_BUFFER_SIZE)
+#define CLOG_MAX_CIRBUF_SIZE			(CLOG_FIXED_LENGTH_BUFFER_NUM*CLOG_FIXED_LENGTH_BUFFER_SIZE)
 #define CLOGTICKSCNTTOPRCLOGS           10
 
 /*L2 Logging */
-#define CLOG_LIMIT_L2_COUNT 50
+#define CLOG_LIMIT_L2_COUNT 500
 
 #define TA_NOR              "\033[0m"       /* all off */
 #define TA_FGC_BLACK        "\033[30m"      /* Black */
@@ -66,15 +67,9 @@ typedef enum {
 	
 typedef enum cLogCntLmt
 {
-   CL_LOG_COUNT_LIMIT_START = 1,
-   CL_LOG_COUNT_LIMIT_STOP
+   CLOG_COUNT_LIMIT_START = 1,
+   CLOG_COUNT_LIMIT_STOP
 }cLogCntLmt;
-	
-typedef struct
-{
-	time_t tv_sec;
-	unsigned int	ms_tti;
-} OS_GNUC_PACKED LOGTIME;
 
 typedef enum _endian {little_endian, big_endian} EndianType;
 

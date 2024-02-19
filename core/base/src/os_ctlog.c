@@ -23,7 +23,6 @@ PRIVATE char g_fileList[CLOG_MAX_FILES][MAX_FILENAME_LENGTH];
 
 PRIVATE unsigned char g_nMaxLogFiles = 1;                       /* MAX Log Files 1 */
 PRIVATE unsigned int g_uiMaxFileSizeLimit = MAX_FILE_SIZE;      /* Max File Size limit for each log file */
-PRIVATE char tz_name[2][CLOG_TIME_ZONE_LEN + 1] = {"CST-8", ""};
 
 PRIVATE int	g_nWrites = 0;                /* number of times log function is called */
 PRIVATE int g_nCurrFileIdx = 0;           /* Current File Number index */
@@ -146,7 +145,7 @@ PRIVATE void ctlog_create_new_log_file(void)
 
    /* create file name, Example-> dbglog_2013_08_11_15_30_00 */
    sprintf(g_fileList[g_nCurrFileIdx], "%s/%s_%s.log",g_logDir, g_fileName, curTime);
-   fp = fopen(g_fileList[g_nCurrFileIdx], "a");
+   fp = fopen(g_fileList[g_nCurrFileIdx], "a+");
 
    if(fp == NULL) {
 	   fprintf(stderr, "Failed to open log file %s\n", g_fileList[g_nCurrFileIdx]);
@@ -181,12 +180,12 @@ PRIVATE void ctlog_add_stderr(void)
 }
 #endif
 
-void os_ctlog_set_fileSize_limit(unsigned int maxFileSize)
+void os_ctlog_set_filesize_limit(unsigned int maxFileSize)
 {
 	g_uiMaxFileSizeLimit = (maxFileSize == 0) ? MAX_FILE_SIZE : maxFileSize*1048576;
 }
 
-void os_ctlog_set_fileNum(unsigned char maxFiles)
+void os_ctlog_set_filenum(unsigned char maxFiles)
 {
 	if(maxFiles > CLOG_MAX_FILES || maxFiles == 0) {
 		g_nMaxLogFiles = CLOG_MAX_FILES;
@@ -206,14 +205,13 @@ void os_ctlog_printf_config(void)
 	fprintf(stderr, "Log level[%d]:\t\t[%s]\n",g_logLevel, g_logStr[g_logLevel]);
 	fprintf(stderr, "File Size Limit:\t[%d KB]\n", g_uiMaxFileSizeLimit/1024);
 	fprintf(stderr, "Maximum Log Files:\t[%d]\n", g_nMaxLogFiles);
-	fprintf(stderr, "Time Zone:\t\t[%s]\n", tz_name[0]);
 
 	fprintf(stderr, "Binary Logging:\t\t[Disabled]\n");
 	fprintf(stderr, "Remote Logging:\t\t[Disabled]\n");
 	fprintf(stderr, "Console Logging:\t[%s]\n", (g_fp==stderr) ? "Enabled" : "Disabled" );
 }
 
-void os_ctlog_set_fileName(const char* fileName)
+void os_ctlog_set_filename(const char* fileName)
 {
 	strncpy(g_fileName, fileName, MAX_FILENAME_LEN);
 }

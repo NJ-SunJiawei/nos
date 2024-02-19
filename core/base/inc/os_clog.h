@@ -269,23 +269,24 @@ os_cdlog_t *os_cdlog_add_stderr(void);
 os_cdlog_t *os_cdlog_add_file(void);
 
 ///////////////////////////ctlog/////////////////////////////////////////////////////
-void os_ctlog_set_fileSize_limit(unsigned int maxFileSize);
-void os_ctlog_set_fileNum(unsigned char maxFiles);
+void os_ctlog_set_filesize_limit(unsigned int maxFileSize);
+void os_ctlog_set_filenum(unsigned char maxFiles);
 void os_ctlog_set_log_path(const char* logDir);
 void os_ctlog_printf_config(void);
-void os_ctlog_set_fileName(const char* fileName);
+void os_ctlog_set_filename(const char* fileName);
 void os_ctlog_set_log_level(os_clog_level_e logLevel);
 void os_ctlog_set_module_mask(unsigned int modMask);
 void os_ctlog_init(void);
 void os_ctlog_final(void);
 
 //////////////////////////cmlog//////////////////////////////////////////////////////
-void os_cmlog_set_fileSize_limit(unsigned int maxFileSize);
-void os_cmlog_set_fileNum(unsigned char maxFiles);
+void os_cmlog_set_filesize_limit(unsigned int maxFileSize);
+void os_cmlog_set_filenum(unsigned char maxFiles);
 void os_cmlog_set_log_path(const char* logDir);
-void os_cmlog_set_circular_bufferSize(unsigned int bufSize);
+void os_cmlog_set_log_refresh_time(os_time_t ms);
+void os_cmlog_set_cirbuf_size(unsigned int bufSize);
 void os_cmlog_printf_config(void);
-void os_cmlog_set_fileName(const char* fileName);
+void os_cmlog_set_filename(const char* fileName);
 void os_cmlog_set_log_level(os_clog_level_e logLevel);
 void os_cmlog_set_module_mask(unsigned int modMask);
 void os_cmlog_init(void);

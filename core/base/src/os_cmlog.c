@@ -15,6 +15,7 @@
 #include <libgen.h>
 #include "private/os_clog_priv.h"
 
+char log_buffer[CLOG_FIXED_LENGTH_BUFFER_NUM][CLOG_FIXED_LENGTH_BUFFER_SIZE];
 
 PRIVATE FILE* g_fp = NULL;       /* global file pointer */
 PRIVATE int g_fd;                /* Global file descriptor for L2 & L3 */
@@ -25,7 +26,6 @@ PRIVATE char g_fileList[CLOG_MAX_FILES][MAX_FILENAME_LENGTH];
 PRIVATE unsigned char g_nMaxLogFiles = 1;                       /* MAX Log Files 1 */
 PRIVATE unsigned int g_uiMaxFileSizeLimit = MAX_FILE_SIZE;      /* Max File Size limit for each log file */
 PRIVATE unsigned int g_cirMaxBufferSize = CLOG_MAX_CIRBUF_SIZE; /* Default circular buffer size 100Kb*/
-PRIVATE char tz_name[2][CLOG_TIME_ZONE_LEN + 1] = {"CST-8", ""};
 
 PRIVATE int g_nCurrFileIdx = 0;           /* Current File Number index */
 
@@ -34,13 +34,13 @@ PRIVATE os_thread_key_t	g_threadkey;
 PRIVATE os_thread_mutex_t g_logmutex; /* Mutex to protect circular buffers */
 PRIVATE os_thread_mutex_t g_condmutex;
 PRIVATE os_thread_cond_t g_cond;
+
 PRIVATE THREAD_DATA* g_pCirList[CLOG_MAX_THREADS]; /* List of thread data pointers */
 PRIVATE int g_nThreadsRegistered;          /* Number of threads registered */
 PRIVATE int thread_signalled;
 PRIVATE THREAD_DATA *g_pSingCirBuff = NULL;
 PRIVATE unsigned short g_prevLogOffset=0;
 PRIVATE int g_threadRunFg = 1;
-
 
 PRIVATE unsigned char g_writeCirBuf = 0;
 PRIVATE volatile unsigned int g_rlogPositionIndex=0;
@@ -49,7 +49,8 @@ PRIVATE unsigned int numTtiTicks;         /* TTI Count */
 PRIVATE unsigned int g_clogWriteCount = 0;
 PRIVATE unsigned int g_maxClogCount   = 50;
 PRIVATE unsigned int g_logsDropCnt    = 0;
-PRIVATE cLogCntLmt   g_clLogCntLimit = CL_LOG_COUNT_LIMIT_STOP;
+PRIVATE cLogCntLmt   g_clLogCntLimit  = CLOG_COUNT_LIMIT_STOP;
+PRIVATE unsigned int g_clogTimeout    = CLOG_CIRBUF_READ_INTERVAL;
 
 PRIVATE void cmlog_create_new_log_file(void);
 PRIVATE void cmlog_read_cirbuf(void);
@@ -139,6 +140,7 @@ PRIVATE THREAD_DATA* cmlog_register_thread(const char* taskName)
 PRIVATE void* cmlog_cirbuf_read_thread(void* arg)
 {
 	struct timespec timeout;
+	struct timeval	now;
 	int retCode;
 
 	//fprintf(stderr, "Circular Buffer Reader thread started\n");
@@ -149,8 +151,12 @@ PRIVATE void* cmlog_cirbuf_read_thread(void* arg)
 		thread_signalled = 0;
 
 		/* set the thread timeout */
-		timeout.tv_sec = time(NULL) + CLOG_CIRBUF_READ_INTERVAL;
-		timeout.tv_nsec = 0;
+		gettimeofday(&now, NULL);
+		timeout.tv_sec = now.tv_sec + g_clogTimeout / 1000U;
+		timeout.tv_nsec= (now.tv_usec + 1000UL * (g_clogTimeout % 1000U)) * 1000UL;
+
+		//timeout.tv_sec = time(NULL) + CLOG_CIRBUF_READ_INTERVAL;
+		//timeout.tv_nsec = 0;
 
 		/* wait for CLOG_CIRBUF_READ_INTERVAL seconds time interval to read buffer */
 		retCode = pthread_cond_timedwait(&g_cond, &g_condmutex, &timeout);
@@ -168,7 +174,7 @@ PRIVATE void* cmlog_cirbuf_read_thread(void* arg)
 
 		cmlog_read_cirbuf();
 
-		fprintf(stderr, "System is exiting ??");
+		fprintf(stderr, "System is exiting\n");
 		perror("cirbuf_read_thread");
 
 		break;
@@ -179,7 +185,7 @@ PRIVATE void* cmlog_cirbuf_read_thread(void* arg)
 
 PRIVATE void cmlog_read_cirbuf(void)
 {
-   unsigned int i, writerPos;
+   unsigned int i, l, writerPos;
 
    g_writeCirBuf = 1;
    /* Before reading circular buffers, store delimiter */
@@ -196,6 +202,10 @@ PRIVATE void cmlog_read_cirbuf(void)
          continue;
 
       writerPos = pThrData->logBufLen;
+	  if(0 != writerPos % CLOG_FIXED_LENGTH_BUFFER_SIZE){
+		  fprintf(stderr, "writerPos[%d] length illegal\n", writerPos);
+		  continue;
+	  }
 
       //fprintf(stderr, "Thread [%ld] WritePos:[%ld] ReadPos:[%ld]\n", i+1, writerPos, pThrData->logReadPos);
 
@@ -204,13 +214,16 @@ PRIVATE void cmlog_read_cirbuf(void)
          /* Calculate the delta data to be read from buffer */
          int dataLen = writerPos - pThrData->logReadPos;
 
+		 if(0 != dataLen % CLOG_FIXED_LENGTH_BUFFER_SIZE){
+			 fprintf(stderr, "dataLen[%d] illegal\n", dataLen);
+			 continue;
+		 }
+
          /* Write the data into file */
-         if(fwrite(pThrData->logBuff+pThrData->logReadPos,1, dataLen, g_fp) == -1) 
-         {
-            fprintf(stderr, "Failed to write data len %d\n", dataLen);
-            cmlog_create_new_log_file();
-            continue;
-         }
+		 for (l = 0; l < dataLen / CLOG_FIXED_LENGTH_BUFFER_SIZE; ++l) {
+			 fprintf(g_fp, "%s", pThrData->logBuff+pThrData->logReadPos + l*CLOG_FIXED_LENGTH_BUFFER_SIZE);
+		 }
+		 fflush(g_fp);
 
          /* reset log read position to last known position */
          pThrData->logReadPos = writerPos;
@@ -218,24 +231,24 @@ PRIVATE void cmlog_read_cirbuf(void)
       else if (pThrData->logReadPos > writerPos) 
       {
          /* Calculate the remaining data left in the buffer */
-         int dataLen = g_cirMaxBufferSize -  pThrData->logReadPos;			
+         int dataLen = g_cirMaxBufferSize -  pThrData->logReadPos;
+
+		 if(0 != dataLen % CLOG_FIXED_LENGTH_BUFFER_SIZE){
+			 fprintf(stderr, "dataLen[%d] illegal\n", dataLen);
+			 continue;
+		 }
 
          /* Write from last know position till end */
-         if(fwrite(pThrData->logBuff+pThrData->logReadPos, 1, dataLen, g_fp) == -1)
-         {
-            fprintf(stderr, "Failed to write data len %d\n", dataLen);
-            cmlog_create_new_log_file();
-            continue;
-         }
-
+		 for (l = 0; l < dataLen / CLOG_FIXED_LENGTH_BUFFER_SIZE; ++l) {
+			 fprintf(g_fp, "%s", pThrData->logBuff+pThrData->logReadPos + l*CLOG_FIXED_LENGTH_BUFFER_SIZE);
+		 }
 
          /* Write from 0 to len position */
-         if(fwrite(pThrData->logBuff, 1, writerPos, g_fp) == -1)
-         {
-            fprintf(stderr, "Failed to write data len %d\n", dataLen);
-            cmlog_create_new_log_file();
-            continue;
-         }
+		 for (l = 0; l < writerPos / CLOG_FIXED_LENGTH_BUFFER_SIZE; ++l) {
+			 fprintf(g_fp, "%s", pThrData->logBuff + l*CLOG_FIXED_LENGTH_BUFFER_SIZE);
+		 }
+
+		 fflush(g_fp);
 
          /* reset log read position to last known position */
          pThrData->logReadPos = writerPos;
@@ -249,7 +262,6 @@ PRIVATE void cmlog_read_cirbuf(void)
 
    g_writeCirBuf = 0;
 }
-
 
 /*PRIVATE EndianType cmlog_getCPU_endian(void)
 {
@@ -365,7 +377,7 @@ PRIVATE void cmlog_create_new_log_file(void)
       unlink(g_fileList[g_nCurrFileIdx]);
 
    sprintf(g_fileList[g_nCurrFileIdx], "%s/%s_%s.log",g_logDir, g_fileName, curTime);
-   fp = fopen(g_fileList[g_nCurrFileIdx], "a");
+   fp = fopen(g_fileList[g_nCurrFileIdx], "a+");
 
    if( fp == NULL ) {
       fprintf(stderr, "Failed to open log file %s\n", g_fileList[g_nCurrFileIdx]);
@@ -393,12 +405,12 @@ PRIVATE void cmlog_create_new_log_file(void)
 
 }
 
-void os_cmlog_set_fileSize_limit(unsigned int maxFileSize)
+void os_cmlog_set_filesize_limit(unsigned int maxFileSize)
 {
 	g_uiMaxFileSizeLimit = (maxFileSize == 0) ? MAX_FILE_SIZE : maxFileSize*1048576;
 }
 
-void os_cmlog_set_fileNum(unsigned char maxFiles)
+void os_cmlog_set_filenum(unsigned char maxFiles)
 {
 	if( maxFiles > CLOG_MAX_FILES || maxFiles == 0 ) {
 		g_nMaxLogFiles = CLOG_MAX_FILES;
@@ -412,7 +424,14 @@ void os_cmlog_set_log_path(const char* logDir)
 	strncpy(g_logDir, logDir, MAX_FILENAME_LEN);
 }
 
-void os_cmlog_set_circular_bufferSize(unsigned int bufSize)
+void os_cmlog_set_log_refresh_time(os_time_t ms)
+{
+	if(ms > 0){
+		g_clogTimeout = ms;
+	}
+}
+
+void os_cmlog_set_cirbuf_size(unsigned int bufSize)
 {
 	g_cirMaxBufferSize = bufSize*1024;
 	g_cirMaxBufferSize = (g_cirMaxBufferSize/50) * 50;
@@ -424,13 +443,12 @@ void os_cmlog_printf_config(void)
 	fprintf(stderr, "Log level[%d]:\t\t[%s]\n",g_logLevel, g_logStr[g_logLevel]);
 	fprintf(stderr, "File Size Limit:\t[%d KB]\n", g_uiMaxFileSizeLimit/1024);
 	fprintf(stderr, "Maximum Log Files:\t[%d]\n", g_nMaxLogFiles);
-	fprintf(stderr, "Time Zone:\t\t[%s]\n", tz_name[0]);
 
 	fprintf(stderr, "Memory Logging:\t\t[Enabled]\n");
 	fprintf(stderr, "Circular BufferSize:\t[Actual:%d KB][Derived:%d Byte]\n", g_cirMaxBufferSize/1024, g_cirMaxBufferSize);
 }
 
-void os_cmlog_set_fileName(const char* fileName)
+void os_cmlog_set_filename(const char* fileName)
 {
 	strncpy(g_fileName, fileName, MAX_FILENAME_LEN);
 }
@@ -486,7 +504,7 @@ void os_cmlog_final(void)
 void os_cmlog_start_count_limit(void)
 {
    g_clogWriteCount = 0;
-   g_clLogCntLimit = CL_LOG_COUNT_LIMIT_START;
+   g_clLogCntLimit = CLOG_COUNT_LIMIT_START;
    fprintf(stderr, "Start Log Restriction\n");
 }
 
@@ -499,7 +517,7 @@ void os_cmlog_start_count_limit(void)
 void os_cmlog_stop_count_limit(void)
 {
    fprintf(stderr, "Stop Log Restriction\n");
-   g_clLogCntLimit = CL_LOG_COUNT_LIMIT_STOP;
+   g_clLogCntLimit = CLOG_COUNT_LIMIT_STOP;
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -522,18 +540,17 @@ void os_cmlog_update_ticks(void)
    if(++rlogTickCount >= CLOGTICKSCNTTOPRCLOGS)
    {
       rlogTickCount = 0;
-      os_cmlog_reset_rate_limit(); /* Resetting rlog write count to 0 */ 
+      os_cmlog_reset_rate_limit();
    }
    return;
 }
-
 
 PRIVATE void cmlog_save_log_data(const void* buf, unsigned short len, unsigned int g_rlogWritePosIndex)
 {
    ++g_clogWriteCount ;
 
    if((1 == g_writeCirBuf) || \
-         ((g_clLogCntLimit == CL_LOG_COUNT_LIMIT_START) && \
+         ((g_clLogCntLimit == CLOG_COUNT_LIMIT_START) && \
           (g_clogWriteCount > g_maxClogCount)) || \
          (len > CLOG_FIXED_LENGTH_BUFFER_SIZE))
    {
@@ -554,15 +571,15 @@ PRIVATE void cmlog_save_log_data(const void* buf, unsigned short len, unsigned i
       /* Start globalPositionIndex again */
       g_rlogPositionIndex = 0;
 
-      /* if reader has not read initial data, minmum buffer size should be 100Kb */
+      /* if reader has not read initial data, minmum buffer size should be 5Kb */
       if(p->logReadPos < CLOG_READ_POS_THRESHOLD && !thread_signalled) {
          pthread_cond_signal(&g_cond); /* this will wakeup thread */
       }
 
-      /* we are unlikely to hit this condition, but to prevent corruption of binary logs */
+      /* we are unlikely to hit this condition, but to prevent corruption of logs */
       /* we cannot write the data, if we write, data will be corrected forever */
       if(p->logReadPos < CLOG_FIXED_LENGTH_BUFFER_SIZE) {
-         fprintf(stderr, "cannot write data.retune buffer parameters\n");
+         fprintf(stderr, "cannot write data, need expand memory or shorten refresh time\n");
          return;
       }
 
@@ -587,15 +604,6 @@ PRIVATE void cmlog_save_log_data(const void* buf, unsigned short len, unsigned i
       memcpy(p->logBuff+logWritePointerPosition, buf, len);
       p->logBufLen += CLOG_FIXED_LENGTH_BUFFER_SIZE;
    }
-
-   /*{
-      static int maxlen = 0;
-      if(len > maxlen) {
-         maxlen = len;
-         fprintf(stderr, "MAX BUFFER SIZE is binary mode is [%d]\n", maxlen);
-      }
-   }*/
-
 }
 
 PRIVATE void cmlog_hex_to_asii(char* p, const char* h, int hexlen)
