@@ -81,8 +81,8 @@ typedef struct {
 } os_context_t;
 
 _CONF_API_ os_context_t *os_global_context(void);
-_ENTER_API_ void os_initialize(void);
-_EXIT_API_ void os_terminate(void);
+_ENTER_API_ void os_core_initialize(void);
+_EXIT_API_ void os_core_terminate(void);
 
 #ifdef __cplusplus
 }

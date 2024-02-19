@@ -19,7 +19,7 @@
 PRIVATE FILE* g_fp = NULL;       /* global file pointer */
 PRIVATE int g_fd;                /* Global file descriptor for L2 & L3 */
 PRIVATE char g_logDir[MAX_FILENAME_LEN] = "/var/log";
-PRIVATE char g_fileName[MAX_FILENAME_LEN] = "cd cm";
+PRIVATE char g_fileName[MAX_FILENAME_LEN] = "cm";
 PRIVATE char g_fileList[CLOG_MAX_FILES][MAX_FILENAME_LENGTH];
 
 PRIVATE unsigned char g_nMaxLogFiles = 1;                       /* MAX Log Files 1 */
@@ -331,7 +331,7 @@ PRIVATE void cmlog_timestamp(char* ts)
     os_gettimeofday(&tv);
     os_localtime(tv.tv_sec, &tm);
 
-   	sprintf(ts,"%04d/%02d/%02d %02d:%02d:%02d.%03d", tm.tm_year+1900, tm.tm_mon+1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec, (int)(tv.tv_usec/1000));
+   	sprintf(ts,"%04d%02d%02d_%02d:%02d:%02d.%03d", tm.tm_year+1900, tm.tm_mon+1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec, (int)(tv.tv_usec/1000));
 }
 
 PRIVATE void cmlog_create_new_log_file(void)
@@ -351,9 +351,9 @@ PRIVATE void cmlog_create_new_log_file(void)
    }
 
    dir  = opendir(g_logDir);
-   if ( dir == NULL )
+   if (dir == NULL)
    { 
-      mkdir(g_logDir, O_RDWR);
+      mkdir(g_logDir, O_RDWR);//0775
    }
    else
    {
@@ -364,11 +364,12 @@ PRIVATE void cmlog_create_new_log_file(void)
    if( g_fileList[g_nCurrFileIdx][0] != '\0' )
       unlink(g_fileList[g_nCurrFileIdx]);
 
-   sprintf(g_fileList[g_nCurrFileIdx], "%s/%s_%s.log",g_logDir, g_fileName, curTime );
-   fp = fopen(g_fileList[g_nCurrFileIdx], "a+");
+   sprintf(g_fileList[g_nCurrFileIdx], "%s/%s_%s.log",g_logDir, g_fileName, curTime);
+   fp = fopen(g_fileList[g_nCurrFileIdx], "a");
 
    if( fp == NULL ) {
       fprintf(stderr, "Failed to open log file %s\n", g_fileList[g_nCurrFileIdx]);
+	  perror("Error opening file");
       return;
    }
 
@@ -421,14 +422,12 @@ void os_cmlog_printf_config(void)
 {
 	fprintf(stderr, "Log File:\t\t[%s]\n", g_fileName);
 	fprintf(stderr, "Log level[%d]:\t\t[%s]\n",g_logLevel, g_logStr[g_logLevel]);
-	fprintf(stderr, "File Size Limit:\t[%d]\n", g_uiMaxFileSizeLimit);
+	fprintf(stderr, "File Size Limit:\t[%d KB]\n", g_uiMaxFileSizeLimit/1024);
 	fprintf(stderr, "Maximum Log Files:\t[%d]\n", g_nMaxLogFiles);
 	fprintf(stderr, "Time Zone:\t\t[%s]\n", tz_name[0]);
 
-	fprintf(stderr, "Console Logging:\t[Disabled]\n");
-	fprintf(stderr, "Binary Logging:\t\t[Enabled]\n");
-	fprintf(stderr, "Circular Buffer:\t[Enabled]\n");
-	fprintf(stderr, "Circular BufferSize:\t[Actual:%d][Derived:%d]\n", g_cirMaxBufferSize/1024, g_cirMaxBufferSize);
+	fprintf(stderr, "Memory Logging:\t\t[Enabled]\n");
+	fprintf(stderr, "Circular BufferSize:\t[Actual:%d KB][Derived:%d Byte]\n", g_cirMaxBufferSize/1024, g_cirMaxBufferSize);
 }
 
 void os_cmlog_set_fileName(const char* fileName)
@@ -454,7 +453,7 @@ void os_cmlog_init(void)
 
 	g_maxClogCount = CLOG_LIMIT_L2_COUNT;
 
-	os_ctlog_printf_config();
+	os_cmlog_printf_config();
 
 	cmlog_init_specific();
 	os_thread_id_t tid;
@@ -533,9 +532,9 @@ PRIVATE void cmlog_save_log_data(const void* buf, unsigned short len, unsigned i
 {
    ++g_clogWriteCount ;
 
-   if((1 == g_writeCirBuf) || 
-         ((g_clLogCntLimit == CL_LOG_COUNT_LIMIT_START) && 
-          (g_clogWriteCount > g_maxClogCount)) || 
+   if((1 == g_writeCirBuf) || \
+         ((g_clLogCntLimit == CL_LOG_COUNT_LIMIT_START) && \
+          (g_clogWriteCount > g_maxClogCount)) || \
          (len > CLOG_FIXED_LENGTH_BUFFER_SIZE))
    {
       g_rlogPositionIndex --;
@@ -609,31 +608,29 @@ PRIVATE void cmlog_hex_to_asii(char* p, const char* h, int hexlen)
 void cmlogN(int logLevel, const char* modName, char* file, const char* func, int line, const char* fmtStr, ...)
 {
 	va_list argList;
-	char szLog1[MAX_LOG_LEN] = {0};
-	char szLog2[MAX_LOG_LEN] = {0};
+	char szLog[MAX_LOG_LEN] = {0};
 
-	snprintf(szLog1, MAX_LOG_LEN, "[%u][%s]%s:%s:%d %s:", numTtiTicks, modName, basename(file), func, line, g_logStr[logLevel]);
+	snprintf(szLog, MAX_LOG_LEN, "[%u][%s]%s:%s:%d %s:", numTtiTicks, modName, basename(file), func, line, g_logStr[logLevel]);
 
 	va_start(argList,fmtStr);
-	vsnprintf(szLog2, MAX_LOG_LEN, fmtStr, argList);
+	vsnprintf(szLog + strlen(szLog), MAX_LOG_LEN - strlen(szLog), fmtStr, argList);
 	va_end(argList);
 
-	cmlog_save_log_data((const void*)szLog2, MAX_LOG_LEN, g_rlogPositionIndex++); 
+	cmlog_save_log_data((const void*)szLog, strlen(szLog), g_rlogPositionIndex++); 
 }
 
 void cmlogSPN(int logLevel, const char* modName, char* file, const char* func, int line, log_sp_arg_e splType, unsigned int splVal, const char* fmtStr, ...)
 {
 	va_list argList;
-	char szLog1[MAX_LOG_LEN] = {0};
-	char szLog2[MAX_LOG_LEN] = {0};
+	char szLog[MAX_LOG_LEN] = {0};
 
-    snprintf(szLog1, MAX_LOG_LEN, "[%u][%s]%s:%s:%d %s:%s:%d:", numTtiTicks, modName, basename(file), func, line, g_logStr[logLevel], g_splStr[splType].name, splVal);
+    snprintf(szLog, MAX_LOG_LEN, "[%u][%s]%s:%s:%d %s:%s:%d:", numTtiTicks, modName, basename(file), func, line, g_logStr[logLevel], g_splStr[splType].name, splVal);
 
     va_start(argList,fmtStr);
-    vsnprintf(szLog2, MAX_LOG_LEN, fmtStr, argList);
+    vsnprintf(szLog + strlen(szLog), MAX_LOG_LEN - strlen(szLog), fmtStr, argList);
     va_end(argList);
 
-	cmlog_save_log_data((const void*)szLog2, MAX_LOG_LEN, g_rlogPositionIndex++); 
+	cmlog_save_log_data((const void*)szLog, strlen(szLog), g_rlogPositionIndex++); 
 }
 
 void cmlogH(int logLevel, const char* modName, char* file, const char* func, int line, const char* fmtStr, const char* hexdump, int hexlen, ...)
@@ -644,7 +641,7 @@ void cmlogH(int logLevel, const char* modName, char* file, const char* func, int
 	cmlog_hex_to_asii(szHex, hexdump, hexlen);
 	snprintf(szLog, MAX_LOG_LEN, fmtStr, numTtiTicks, modName, basename(file), func, line, g_logStr[logLevel], szHex);
 
-	cmlog_save_log_data((const void*)szLog, MAX_LOG_LEN, g_rlogPositionIndex++); 
+	cmlog_save_log_data((const void*)szLog, strlen(szLog), g_rlogPositionIndex++); 
 }
 
 

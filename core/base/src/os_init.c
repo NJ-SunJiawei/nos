@@ -27,7 +27,7 @@ _CONF_API_ os_context_t *os_global_context(void)
     return &self;
 }
 
-
+/*/var/lib/apport/coredump*/
 PRIVATE void os_clog_enable_coredump(bool enable_core)
 {
 #ifdef HAVE_SETRLIMIT
@@ -37,7 +37,7 @@ PRIVATE void os_clog_enable_coredump(bool enable_core)
 #endif
 }
 
-_ENTER_API_ void os_initialize(void)
+_ENTER_API_ void os_core_initialize(void)
 {
 	os_clog_enable_coredump(true);
 
@@ -58,7 +58,7 @@ _ENTER_API_ void os_initialize(void)
 #endif
 }
 
-_EXIT_API_ void os_terminate(void)
+_EXIT_API_ void os_core_terminate(void)
 {
 #if OS_USE_TALLOC == 1
 	os_kmem_final();

@@ -3,7 +3,7 @@
 set(SRC_FILES
 	cJSON.c
 	cJSON_Utils.c
-	sqlite3.c
+	#sqlite3.c
 	os_abort.c
 	os_errno.c
 	os_str.c

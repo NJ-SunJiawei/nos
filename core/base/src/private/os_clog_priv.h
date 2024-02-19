@@ -26,7 +26,7 @@ PRIVATE const char* g_logStr[MAX_LOG_LEVEL] = { "NONE", "FATAL", "ERROR", "WARN"
 #define MAX_FILENAME_LENGTH 	        700
 #define LOG_TIME_LEN 			        64
 #define MAX_LOG_BUF_SIZE 		        5000
-#define CLOG_MAX_CIRBUF_SIZE			(1024*100*MAX_LOG_LEN)
+#define CLOG_MAX_CIRBUF_SIZE			(1024*100)
 #define CLOG_MAX_FILES		 			5
 #define CLOG_MAX_TIME_STAMP 			128
 #define CLOG_MAX_TAX_NAME				16
@@ -40,7 +40,7 @@ PRIVATE const char* g_logStr[MAX_LOG_LEVEL] = { "NONE", "FATAL", "ERROR", "WARN"
 #define CLOGTICKSCNTTOPRCLOGS           10
 
 /*L2 Logging */
-#define CLOG_LIMIT_L2_COUNT 100
+#define CLOG_LIMIT_L2_COUNT 50
 
 #define TA_NOR              "\033[0m"       /* all off */
 #define TA_FGC_BLACK        "\033[30m"      /* Black */

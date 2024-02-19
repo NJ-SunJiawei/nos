@@ -73,7 +73,7 @@ PRIVATE void cdlog_cycle(int sig);
 PRIVATE void cdlog_catch_segViolation(int sig);
 
 PRIVATE char g_logDir[MAX_FILENAME_LEN] = "/var/log";
-PRIVATE char g_fileName[MAX_FILENAME_LEN] = "os";
+PRIVATE char g_fileName[MAX_FILENAME_LEN] = "cd";
 PRIVATE char g_fileList[CLOG_MAX_FILES][MAX_FILENAME_LENGTH];
 PRIVATE unsigned int g_uiMaxFileSizeLimit = MAX_FILE_SIZE;
 PRIVATE unsigned char g_nMaxLogFiles = 1;
@@ -354,7 +354,7 @@ PRIVATE void cdlog_file_timestamp(char* ts)
     os_gettimeofday(&tv);
     os_localtime(tv.tv_sec, &tm);
 
-   	sprintf(ts,"%04d/%02d/%02d %02d:%02d:%02d.%03d", tm.tm_year+1900, tm.tm_mon+1, tm.tm_mday, tm.tm_hour, tm.tm_min,tm.tm_sec, (int)(tv.tv_usec/1000));
+   	sprintf(ts,"%04d%02d%02d_%02d:%02d:%02d.%03d", tm.tm_year+1900, tm.tm_mon+1, tm.tm_mday, tm.tm_hour, tm.tm_min,tm.tm_sec, (int)(tv.tv_usec/1000));
 }
 
 
@@ -363,12 +363,17 @@ PRIVATE void cdlog_create_new_file(os_cdlog_t *cdlog)
    FILE *fp, *prev_fp = cdlog->file.out;
    char curTime[CLOG_MAX_TIME_STAMP];
    int fd;
-
+   char *temptr;
    DIR *dir = NULL;
 
    /* get current time, when file is created */
    cdlog_file_timestamp(curTime); 
- 
+   temptr = strchr(curTime, '.');
+   if (temptr != NULL)
+   {
+      *temptr = 0;
+   }
+
    dir  = opendir(g_logDir);
    if ( dir == NULL )
    { 
@@ -384,10 +389,11 @@ PRIVATE void cdlog_create_new_file(os_cdlog_t *cdlog)
       unlink(g_fileList[cdlog->file.idx]);
 
    sprintf(g_fileList[cdlog->file.idx], "%s/%s_%s.log",g_logDir, g_fileName, curTime );
-   fp = fopen(g_fileList[cdlog->file.idx], "w+");
+   fp = fopen(g_fileList[cdlog->file.idx], "a");
 
    if( fp == NULL ) {
       fprintf(stderr, "Failed to open log file %s\n", g_fileList[cdlog->file.idx]);
+	  perror("Error opening file");
       return;
    }
 

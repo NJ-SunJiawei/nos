@@ -103,7 +103,7 @@ PRIVATE void ctlog_timestamp(char* ts)
     os_gettimeofday(&tv);
     os_localtime(tv.tv_sec, &tm);
 
-   	sprintf(ts,"%04d/%02d/%02d %02d:%02d:%02d.%03d", tm.tm_year+1900, tm.tm_mon+1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec, (int)(tv.tv_usec/1000));
+   	sprintf(ts,"%04d%02d%02d_%02d:%02d:%02d.%03d", tm.tm_year+1900, tm.tm_mon+1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec, (int)(tv.tv_usec/1000));
 }
 
 PRIVATE struct tm* ctlog_get_timestamp(int* usec)
@@ -134,7 +134,7 @@ PRIVATE void ctlog_create_new_log_file(void)
    dir = opendir(g_logDir);
 
    if (dir == NULL){ 
-      mkdir(g_logDir, O_RDWR);
+      mkdir(g_logDir, O_RDWR);//0775
    }
    else{
       closedir(dir);
@@ -146,11 +146,12 @@ PRIVATE void ctlog_create_new_log_file(void)
 
    /* create file name, Example-> dbglog_2013_08_11_15_30_00 */
    sprintf(g_fileList[g_nCurrFileIdx], "%s/%s_%s.log",g_logDir, g_fileName, curTime);
-   fp = fopen(g_fileList[g_nCurrFileIdx], "a+");
+   fp = fopen(g_fileList[g_nCurrFileIdx], "a");
 
    if(fp == NULL) {
-      fprintf(stderr, "Failed to open log file %s\n", g_fileList[g_nCurrFileIdx]);
-      return;
+	   fprintf(stderr, "Failed to open log file %s\n", g_fileList[g_nCurrFileIdx]);
+	   perror("Error opening file");
+	   return;
    }
 
    fd = fileno(fp);
@@ -203,7 +204,7 @@ void os_ctlog_printf_config(void)
 {
 	fprintf(stderr, "Log File:\t\t[%s]\n", g_fileName);
 	fprintf(stderr, "Log level[%d]:\t\t[%s]\n",g_logLevel, g_logStr[g_logLevel]);
-	fprintf(stderr, "File Size Limit:\t[%d]\n", g_uiMaxFileSizeLimit);
+	fprintf(stderr, "File Size Limit:\t[%d KB]\n", g_uiMaxFileSizeLimit/1024);
 	fprintf(stderr, "Maximum Log Files:\t[%d]\n", g_nMaxLogFiles);
 	fprintf(stderr, "Time Zone:\t\t[%s]\n", tz_name[0]);
 

@@ -95,8 +95,8 @@ typedef unsigned int LOGID;
 extern int g_logLevel; 
 extern unsigned int g_modMask; 
 
-#define FMTSTR_T   "[%04d/%02d/%02d %02d:%02d:%02d.%03d][%s]%s:%s:%d %s:"
-#define FMTSTR_M   "[%u][%s]%s:%s:%d %s:"
+#define FMTSTR_T   "[%04d/%02d/%02d %02d:%02d:%02d.%03d][%s]%s:%s:%d %s:\n"
+#define FMTSTR_M   "[%u][%s]%s:%s:%d %s:\n"
 
 /****************************CTLOG**********************************************/
 #define RLOGX(_level, _splenum, _splArg, _lstr, ...) \
@@ -153,7 +153,7 @@ void ctlogH(int logLevel, const char* modName, char* file, const char* func, int
 				do { \
 					if( _level <= g_logLevel || g_modMask & CTLOG_MODULE_ID)\
 					{ \
-						ctlog##_N(_level, CTLOG_MODULE_NAME, __FILE__, __OS_FUNC__, __LINE__, FMTSTR_M _fmtStr "\n", ##__VA_ARGS__); \
+						cmlog##_N(_level, CTLOG_MODULE_NAME, __FILE__, __OS_FUNC__, __LINE__, FMTSTR_M _fmtStr "\n", ##__VA_ARGS__); \
 					} \
 				} while (0)
 
@@ -161,7 +161,7 @@ void ctlogH(int logLevel, const char* modName, char* file, const char* func, int
 				do { \
 					if( _level <= g_logLevel || g_modMask & CTLOG_MODULE_ID)\
 					{ \
-						ctlogN(_level, CTLOG_MODULE_NAME, __FILE__, __OS_FUNC__, __LINE__, _fmtStr "\n", ##__VA_ARGS__); \
+						cmlogN(_level, CTLOG_MODULE_NAME, __FILE__, __OS_FUNC__, __LINE__, _fmtStr "\n", ##__VA_ARGS__); \
 					} \
 				} while (0)
 
@@ -169,11 +169,13 @@ void ctlogH(int logLevel, const char* modName, char* file, const char* func, int
 				do { \
 					if( _level <= g_logLevel || g_modMask & CTLOG_MODULE_ID)\
 					{ \
-						ctlogSPN(_level, CTLOG_MODULE_NAME, __FILE__, __OS_FUNC__,__LINE__, _splenum, _splArg, _fmtStr "\n", ##__VA_ARGS__); \
+						cmlogSPN(_level, CTLOG_MODULE_NAME, __FILE__, __OS_FUNC__,__LINE__, _splenum, _splArg, _fmtStr "\n", ##__VA_ARGS__); \
 					} \
 				} while (0)
 
 void cmlogN(int logLevel, const char* modName, char* file, const char* func, int line, const char* fmtStr, ...);
+void cmlogSPN(int logLevel, const char* modName, char* file, const char* func, int line, log_sp_arg_e splType, unsigned int splVal, const char* fmtStr, ...);
+void cmlogH(int logLevel, const char* modName, char* file, const char* func, int line, const char* fmtStr, const char* hexdump, int hexlen, ...);
 
 /****************************CDLOG**********************************************/
 #define cdlog_fatal(...)  cdlog_message(FATAL, 0, __VA_ARGS__)
