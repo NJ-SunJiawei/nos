@@ -20,7 +20,7 @@ PRIVATE const char* g_logStr[MAX_LOG_LEVEL] = { "NONE", "FATAL", "ERROR", "WARN"
 
 #define CLOG_SEGFAULT_STR "Segmentation Fault Occurred\n%s"
 
-#define MAX_FILE_SIZE  			        3145728 /* 3MB */
+#define MAX_FILE_SIZE  			        3145728 /* 3MB 3145728*/
 #define MAX_LOG_LEN				        256
 #define MAX_FILENAME_LEN 		        300
 #define MAX_FILENAME_LENGTH 	        700
@@ -29,19 +29,19 @@ PRIVATE const char* g_logStr[MAX_LOG_LEVEL] = { "NONE", "FATAL", "ERROR", "WARN"
 #define CLOG_MAX_FILES		 			5
 #define CLOG_MAX_TIME_STAMP 			128
 #define CLOG_MAX_TAX_NAME				16
-#define CLOG_CIRBUF_READ_INTERVAL	    500	   /*ms */
+#define CLOG_CIRBUF_READ_INTERVAL	    5000	/*us*/
 #define CLOG_MAX_THREADS				16
 #define CLOG_TIME_ZONE_LEN				8
 #define CLOG_MAX_STACK_DEPTH 		    24
 #define CLOG_MAX_BACKTRACE_BUFSZ	    2048
 #define CLOG_FIXED_LENGTH_BUFFER_SIZE   MAX_LOG_LEN
 #define CLOG_FIXED_LENGTH_BUFFER_NUM    10240
-#define CLOG_READ_POS_THRESHOLD         (20*CLOG_FIXED_LENGTH_BUFFER_SIZE)
+#define CLOG_READ_POS_THRESHOLD         ((CLOG_FIXED_LENGTH_BUFFER_NUM/10)*CLOG_FIXED_LENGTH_BUFFER_SIZE)
 #define CLOG_MAX_CIRBUF_SIZE			(CLOG_FIXED_LENGTH_BUFFER_NUM*CLOG_FIXED_LENGTH_BUFFER_SIZE)
 #define CLOGTICKSCNTTOPRCLOGS           10
 
 /*L2 Logging */
-#define CLOG_LIMIT_L2_COUNT 500
+#define CLOG_LIMIT_COUNT   50
 
 #define TA_NOR              "\033[0m"       /* all off */
 #define TA_FGC_BLACK        "\033[30m"      /* Black */
@@ -79,7 +79,6 @@ typedef struct {
 	unsigned char*	logBuff;	/* LOG Buffer */
 	unsigned int	logBufLen;	/* Data Written till now */
 	unsigned int	logReadPos; /* Reader thread position */
-	unsigned char	listIndex;	/* Index to global list */
 } THREAD_DATA;
 
 

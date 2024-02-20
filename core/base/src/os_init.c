@@ -39,6 +39,8 @@ PRIVATE void os_clog_enable_coredump(bool enable_core)
 
 _ENTER_API_ void os_core_initialize(void)
 {
+	fprintf(stderr, "os_core_initialize enter\n");
+
 	os_clog_enable_coredump(true);
 
 #if defined(OS_USE_CDLOG)
@@ -73,4 +75,5 @@ _EXIT_API_ void os_core_terminate(void)
 #elif defined(OS_USE_CMLOG)
 	os_cmlog_final();
 #endif
+	fprintf(stderr, "os_core_terminate exit\n");
 }

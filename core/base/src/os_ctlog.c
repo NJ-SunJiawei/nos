@@ -16,9 +16,9 @@
 #include "private/os_clog_priv.h"
 
 PRIVATE FILE* g_fp = NULL;       /* global file pointer */
-PRIVATE int g_fd;                /* Global file descriptor for L2 & L3 */
+PRIVATE int g_fd;                /* Global file descriptor for L2 */
 PRIVATE char g_logDir[MAX_FILENAME_LEN] = "/var/log";
-PRIVATE char g_fileName[MAX_FILENAME_LEN] = "ct";
+PRIVATE char g_fileName[MAX_FILENAME_LEN] = "ctxt";
 PRIVATE char g_fileList[CLOG_MAX_FILES][MAX_FILENAME_LENGTH];
 
 PRIVATE unsigned char g_nMaxLogFiles = 1;                       /* MAX Log Files 1 */
@@ -41,8 +41,11 @@ PRIVATE void ctlog_create_new_log_file(void);
 
 PRIVATE void ctlog_flush_data(int sig)
 {
-	fflush(g_fp);
-	fclose(g_fp);
+	if(g_fp){
+		fflush(g_fp);
+		fclose(g_fp);
+		g_fp = NULL;
+	}
 
 	if(SIGSEGV == sig)
 	{
@@ -145,7 +148,7 @@ PRIVATE void ctlog_create_new_log_file(void)
 
    /* create file name, Example-> dbglog_2013_08_11_15_30_00 */
    sprintf(g_fileList[g_nCurrFileIdx], "%s/%s_%s.log",g_logDir, g_fileName, curTime);
-   fp = fopen(g_fileList[g_nCurrFileIdx], "a+");
+   fp = fopen(g_fileList[g_nCurrFileIdx], "w+");
 
    if(fp == NULL) {
 	   fprintf(stderr, "Failed to open log file %s\n", g_fileList[g_nCurrFileIdx]);
@@ -243,8 +246,11 @@ void os_ctlog_init(void)
 
 void os_ctlog_final(void)
 {
-	fflush(g_fp);
-	fclose(g_fp);
+	if(g_fp){
+		fflush(g_fp);
+		fclose(g_fp);
+		g_fp = NULL;
+	}
 }
 
 PRIVATE void ctlog_hex_to_asii(char* p, const char* h, int hexlen)

@@ -73,7 +73,7 @@ PRIVATE void cdlog_cycle(int sig);
 PRIVATE void cdlog_catch_segViolation(int sig);
 
 PRIVATE char g_logDir[MAX_FILENAME_LEN] = "/var/log";
-PRIVATE char g_fileName[MAX_FILENAME_LEN] = "cd";
+PRIVATE char g_fileName[MAX_FILENAME_LEN] = "cdebug";
 PRIVATE char g_fileList[CLOG_MAX_FILES][MAX_FILENAME_LENGTH];
 PRIVATE unsigned int g_uiMaxFileSizeLimit = MAX_FILE_SIZE;
 PRIVATE unsigned char g_nMaxLogFiles = 1;
@@ -389,7 +389,7 @@ PRIVATE void cdlog_create_new_file(os_cdlog_t *cdlog)
       unlink(g_fileList[cdlog->file.idx]);
 
    sprintf(g_fileList[cdlog->file.idx], "%s/%s_%s.log",g_logDir, g_fileName, curTime );
-   fp = fopen(g_fileList[cdlog->file.idx], "a");
+   fp = fopen(g_fileList[cdlog->file.idx], "w+");
 
    if( fp == NULL ) {
       fprintf(stderr, "Failed to open log file %s\n", g_fileList[cdlog->file.idx]);
