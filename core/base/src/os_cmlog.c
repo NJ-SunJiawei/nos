@@ -471,12 +471,44 @@ PRIVATE void cmlog_save_log_data(const void* buf, unsigned int len)
 	}	 
 }
 
-PRIVATE void cmlog_hex_to_asii(char* p, const char* h, int hexlen)
+#if 0
+PRIVATE void cmlog_hex_to_asii(char* out, const unsigned char* h, int hexlen)
 {
-   for(int i = 0; i < hexlen; i++, p+=3, h++){
-	   sprintf(p, "%02x ", *h);
+   for(int i = 0; i < hexlen; i++, out+=3, h++){
+	   sprintf(out, "%02x ", *h);
    }
 }
+#else
+PRIVATE void cmlog_hex_to_asii(char* out, const unsigned char* h, int hexlen)
+{
+    size_t n, m;
+    char *p, *last;
+
+    last = out + MAX_LOG_BUF_SIZE*3;
+    p = out;
+
+    for (n = 0; n < hexlen; n += 16) {
+        p = os_slprintf(p, last, "%04x: ", (int)n);
+        
+        for (m = n; m < n + 16; m++) {
+            if (m > n && (m % 4) == 0)
+                p = os_slprintf(p, last, " ");
+            if (m < hexlen)
+                p = os_slprintf(p, last, "%02x", h[m]);
+            else
+                p = os_slprintf(p, last, "  ");
+        }
+
+        p = os_slprintf(p, last, "   ");
+
+        for (m = n; m < hexlen && m < n + 16; m++)
+            p = os_slprintf(p, last, "%c", isprint(h[m]) ? h[m] : '.');
+
+        p = os_slprintf(p, last, "\n");
+    }
+
+}
+#endif
 
 void cmlogN(int content_only, int logLevel, const char* modName, char* file, const char* func, int line, const char* fmtStr, ...)
 {
@@ -531,7 +563,7 @@ void cmlogSPN(int logLevel, const char* modName, char* file, const char* func, i
 	cmlog_save_log_data((const void*)szLog, strlen(szLog)); 
 }
 
-void cmlogH(int logLevel, const char* modName, char* file, const char* func, int line, const char* fmtStr, const char* hexdump, int hexlen, ...)
+void cmlogH(int logLevel, const char* modName, char* file, const char* func, int line, const char* fmtStr, const unsigned char* hexdump, int hexlen, ...)
 {
 	char szHex[MAX_LOG_BUF_SIZE*3] = {0};
 	void *szLog = NULL;

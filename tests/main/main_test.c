@@ -30,6 +30,12 @@ void test_1(void)
 	time_stop = tv.tv_sec*1000000LL + tv.tv_usec;
 	printf_out = time_stop - time_start;
 
+
+	uint8_t k[16] = "\x46\x5B\x5C\xE8\xB1\x99\xB4\x9F\xAA\x5F\x0A\x2E\xE2\x38\xA6\xBC";
+    os_logh(TRACE, "num:%s" ,k, 16);
+
+	os_logsp(ERROR, ERRNOID, 222, "getsockopt(SCTP_PEER_ADDR_PARAMS) failed [%d]", 111);
+
 	printf("mlog_out = %ldus, printf_out = %ldus\n", (log_out)/LOG_TEST_NUM , (printf_out)/LOG_TEST_NUM);
 
 }

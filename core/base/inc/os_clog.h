@@ -20,13 +20,6 @@ extern "C" {
 #define CDLOG_DOMAIN      1
 #endif
 
-#ifndef CTLOG_MODULE_ID
-#define CTLOG_MODULE_ID     0x00000001
-#endif
-#ifndef CTLOG_MODULE_NAME
-#define CTLOG_MODULE_NAME   "os"
-#endif
-
 
 #ifndef CMLOG_MODULE_ID
 #define CMLOG_MODULE_ID     0x00000001
@@ -35,7 +28,7 @@ extern "C" {
 #define CMLOG_MODULE_NAME   "os"
 #endif
 
-#define FMTSTR_T   "[%04d/%02d/%02d %02d:%02d:%02d.%03d] [%s] %s:%d %s:\n"
+#define FMTSTR_T   "[%s] [%s] %s:%d %s:\n"
 #define FMTSTR_M   "[%u] [%s] %s:%d %s:\n"
 
 typedef enum {
@@ -49,7 +42,7 @@ typedef enum {
 	MAX_LOG_LEVEL
 } log_level_e;
 
-
+//////////////////////////////////////
 typedef struct {
     char name[32];
 } log_sp_info_t;
@@ -81,13 +74,7 @@ PRIVATE const log_sp_info_t g_splStr[] = {
 typedef enum {
 	FOREACH_ID(ARGV_ENUM)
 } log_sp_arg_e;
-
-typedef enum
-{
-	TIME_REFERENCE=0,
-	TIME_DELIMITER,
-	OS_SIGSEGV,
-}LOGID_TYPE;
+////////////////////////////////////
 
 typedef	log_sp_arg_e os_clog_sp_arg_e;
 typedef log_level_e os_clog_level_e;
@@ -121,40 +108,40 @@ do { \
 #ifdef CMLOG_ALLOW_CLOCK_TIME
 #define CMLOG_ARG_H(_level, _fmtStr, ...) \
 				do { \
-					if( _level <= g_logLevel || g_modMask & CTLOG_MODULE_ID)\
+					if( _level <= g_logLevel || g_modMask & CMLOG_MODULE_ID)\
 					{ \
-						cmlogH(_level, CTLOG_MODULE_NAME, __FILE__, __OS_FUNC__, __LINE__, FMTSTR_T _fmtStr "\n", ##__VA_ARGS__); \
+						cmlogH(_level, CMLOG_MODULE_NAME, __FILE__, __OS_FUNC__, __LINE__, FMTSTR_T _fmtStr "\n", ##__VA_ARGS__); \
 					} \
 				} while (0)
 #else
 #define CMLOG_ARG_H(_level, _fmtStr, ...) \
 				do { \
-					if( _level <= g_logLevel || g_modMask & CTLOG_MODULE_ID)\
+					if( _level <= g_logLevel || g_modMask & CMLOG_MODULE_ID)\
 					{ \
-						cmlogH(_level, CTLOG_MODULE_NAME, __FILE__, __OS_FUNC__, __LINE__, FMTSTR_M _fmtStr "\n", ##__VA_ARGS__); \
+						cmlogH(_level, CMLOG_MODULE_NAME, __FILE__, __OS_FUNC__, __LINE__, FMTSTR_M _fmtStr "\n", ##__VA_ARGS__); \
 					} \
 				} while (0)
 #endif
 
 #define CMLOG_ARG_X(_contentFg, _level, _fmtStr, ...) \
 				do { \
-					if( _level <= g_logLevel || g_modMask & CTLOG_MODULE_ID)\
+					if( _level <= g_logLevel || g_modMask & CMLOG_MODULE_ID)\
 					{ \
-						cmlogN(_contentFg, _level, CTLOG_MODULE_NAME, __FILE__, __OS_FUNC__, __LINE__, _fmtStr "\n", ##__VA_ARGS__); \
+						cmlogN(_contentFg, _level, CMLOG_MODULE_NAME, __FILE__, __OS_FUNC__, __LINE__, _fmtStr "\n", ##__VA_ARGS__); \
 					} \
 				} while (0)
 
 #define CMLOG_ARG_SPX(_level, _splenum, _splArg, _fmtStr, ...) \
 				do { \
-					if( _level <= g_logLevel || g_modMask & CTLOG_MODULE_ID)\
+					if( _level <= g_logLevel || g_modMask & CMLOG_MODULE_ID)\
 					{ \
-						cmlogSPN(_level, CTLOG_MODULE_NAME, __FILE__, __OS_FUNC__,__LINE__, _splenum, _splArg, _fmtStr "\n", ##__VA_ARGS__); \
+						cmlogSPN(_level, CMLOG_MODULE_NAME, __FILE__, __OS_FUNC__,__LINE__, _splenum, _splArg, _fmtStr "\n", ##__VA_ARGS__); \
 					} \
 				} while (0)
 
 void cmlogN(int content_only, int logLevel, const char* modName, char* file, const char* func, int line, const char* fmtStr, ...);
 void cmlogSPN(int logLevel, const char* modName, char* file, const char* func, int line, log_sp_arg_e splType, unsigned int splVal, const char* fmtStr, ...);
-void cmlogH(int logLevel, const char* modName, char* file, const char* func, int line, const char* fmtStr, const char* hexdump, int hexlen, ...);
+void cmlogH(int logLevel, const char* modName, char* file, const char* func, int line, const char* fmtStr, const unsigned char* hexdump, int hexlen, ...);
 
 /****************************CDLOG**********************************************/
 #define cdlog_fatal(...)  cdlog_message(FATAL, 0, __VA_ARGS__)
