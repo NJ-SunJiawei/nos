@@ -253,8 +253,8 @@ PRIVATE void cmlog_printf_static(void)
 {
 	fprintf(g_fp, "Log drop count:\t\t[%d]\n", g_logsDropCnt);
 	fprintf(g_fp, "Log lost count:\t\t[%d]\n", g_logsLostCnt);
-	os_ring_queue_show(log_queue);
-	os_ring_buf_show(log_buf);
+	//os_ring_queue_show(log_queue);
+	//os_ring_buf_show(log_buf);
 }
 
 /*/var/lib/apport/coredump*/
