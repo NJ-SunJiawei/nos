@@ -55,7 +55,6 @@ PRIVATE int	g_nWrites = 0;  /* number of times log function is called */
 
 PRIVATE void cmlog_deregister_res(void)
 {
-	//g_readyFg = 0;
 	os_ring_buf_destroy(log_buf);
 	os_ring_queue_destroy(log_queue);
 }
@@ -109,16 +108,10 @@ PRIVATE void cmlog_read_final(void)
 PRIVATE void cmlog_flush_data(int sig)
 {
 	g_readyFg = 0;
+	g_clogWriteCount = 0;
+	//os_ring_queue_term(log_queue); //all no block,no need term
 
 	cmlog_read_final();
-
-	g_clogWriteCount = 0;
-
-	if(g_fp){
-		fflush(g_fp);
-		fclose(g_fp);
-		g_fp = NULL;
-	}
 
 	if(SIGSEGV == sig)
 	{
@@ -226,7 +219,7 @@ PRIVATE void cmlog_create_new_log_file(void)
    }
 
    sprintf(g_fileList[g_nCurrFileIdx], "%s/%s_%s.log",g_logDir, g_fileName, curTime);
-   fp = fopen(g_fileList[g_nCurrFileIdx], "w+");
+   fp = fopen(g_fileList[g_nCurrFileIdx], "w");
 
    if( fp == NULL ) {
       fprintf(stderr, "Failed to open log file %s\n", g_fileList[g_nCurrFileIdx]);
@@ -258,8 +251,8 @@ PRIVATE void cmlog_create_new_log_file(void)
 
 PRIVATE void cmlog_printf_static(void)
 {
-	fprintf(stderr, "Log drop count:\t\t[%d]\n", g_logsDropCnt);
-	fprintf(stderr, "Log lost count:\t\t[%d]\n", g_logsLostCnt);
+	fprintf(g_fp, "Log drop count:\t\t[%d]\n", g_logsDropCnt);
+	fprintf(g_fp, "Log lost count:\t\t[%d]\n", g_logsLostCnt);
 	os_ring_queue_show(log_queue);
 	os_ring_buf_show(log_buf);
 }
@@ -361,6 +354,7 @@ void os_cmlog_init(void)
 	signal(SIGSEGV, cmlog_catch_segViolation);
 	signal(SIGBUS,  cmlog_catch_segViolation);
 	signal(SIGINT,  cmlog_flush_data);
+	signal(SIGHUP,  cmlog_flush_data);
 
 	cmlog_enable_coredump(true);
 
@@ -380,7 +374,7 @@ void os_cmlog_init(void)
 #endif
 
 	if(pthread_create(&tid, NULL, cmlog_cirbuf_read_thread, NULL) != 0) {
-		fprintf(stderr, "Failed to initialize log server thread\n");
+		fprintf(g_fp, "Failed to initialize log server thread\n");
 		exit(0);
 	}
 
@@ -392,17 +386,17 @@ void os_cmlog_init(void)
 void os_cmlog_final(void)
 {
 	g_readyFg = 0;
-
-	//os_ring_queue_term(log_queue); //all no block,no need term
+	g_clogWriteCount = 0;
 
 	cmlog_read_final();
 
-	if(g_fp){
-		fflush(g_fp);
-		fclose(g_fp);
-		g_fp = NULL;
-	}
 	cmlog_printf_static();
+
+	fflush(g_fp);
+	if(g_fp != stderr){
+		fclose(g_fp);
+	}
+
 	cmlog_deregister_res();
 }
 

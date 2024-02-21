@@ -36,6 +36,12 @@ void test_1(void)
 
 }
 
+void term(void)
+{
+    os_buf_default_destroy();
+	os_core_terminate();
+}
+
 int main(void){
     os_buf_config_t config;
 
@@ -48,9 +54,8 @@ int main(void){
 
 	test_1();
 
-	atexit(os_core_terminate);
+	atexit(term);
 	printf("daemon terminating...\n");
-	sleep(10);
-    os_buf_default_destroy();
+	while(1);
 	return -1;
 }
