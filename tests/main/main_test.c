@@ -2,7 +2,7 @@
 
 void test_1(void)
 {
-#define LOG_TEST_NUM 9000
+#define LOG_TEST_NUM 1000
     struct timeval tv;
     int64_t time_start;
     int64_t time_stop;

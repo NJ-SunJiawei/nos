@@ -112,6 +112,7 @@ PRIVATE void cmlog_flush_data(int sig)
 	//os_ring_queue_term(log_queue); //all no block,no need term
 
 	cmlog_read_final();
+	fflush(g_fp);
 
 	if(SIGSEGV == sig)
 	{
