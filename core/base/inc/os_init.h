@@ -28,6 +28,7 @@
 #define OS_USE_TALLOC 0
 #define OS_USE_CMLOG
 //#define CMLOG_ALLOW_CONSOLE_LOGS
+#define CMLOG_ALLOW_CLOCK_TIME
 
 #include "os_platform.h"
 
@@ -88,6 +89,7 @@ typedef struct {
 _CONF_API_ os_context_t *os_global_context(void);
 _ENTER_API_ void os_core_initialize(void);
 _EXIT_API_ void os_core_terminate(void);
+_EXIT_API_ void os_core_callback(void (*termFunc)(void));
 
 #ifdef __cplusplus
 }

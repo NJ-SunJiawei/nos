@@ -35,8 +35,8 @@ extern "C" {
 #define CMLOG_MODULE_NAME   "os"
 #endif
 
-#define FMTSTR_T   "[%04d/%02d/%02d %02d:%02d:%02d.%03d][%s]%s:%s:%d %s:\n"
-#define FMTSTR_M   "[%u][%s]%s:%s:%d %s:\n"
+#define FMTSTR_T   "[%04d/%02d/%02d %02d:%02d:%02d.%03d] [%s] %s:%d %s:\n"
+#define FMTSTR_M   "[%u] [%s] %s:%d %s:\n"
 
 typedef enum {
 	NONE=0,
@@ -113,7 +113,8 @@ do { \
 
 #define RLOGX_CFG(_level, _splenum, _splArg, _lstr, ...)  RLOGX(_level, _splenum, _splArg, _lstr, ##__VA_ARGS__)
 /****************************CMLOG**********************************************/
-#define CMLOGX(_level, _lstr, ...)                        CMLOG_ARG_X(_level, _lstr, ##__VA_ARGS__)
+#define CMPRINT(_level, _lstr, ...)                       CMLOG_ARG_X(1, _level, _lstr, ##__VA_ARGS__)
+#define CMLOGX(_level, _lstr, ...)                        CMLOG_ARG_X(0, _level, _lstr, ##__VA_ARGS__)
 #define CMLOGSPX(_level, _splenum, _splArg, _lstr, ...)   CMLOG_ARG_SPX(_level, _splenum, _splArg, _lstr, ##__VA_ARGS__)
 #define CMLOGH(_level, _lstr, _hexdata, _hexlen)          CMLOG_ARG_H(_level, _lstr, _hexdata, _hexlen)
 
@@ -135,11 +136,11 @@ do { \
 				} while (0)
 #endif
 
-#define CMLOG_ARG_X(_level, _fmtStr, ...) \
+#define CMLOG_ARG_X(_contentFg, _level, _fmtStr, ...) \
 				do { \
 					if( _level <= g_logLevel || g_modMask & CTLOG_MODULE_ID)\
 					{ \
-						cmlogN(_level, CTLOG_MODULE_NAME, __FILE__, __OS_FUNC__, __LINE__, _fmtStr "\n", ##__VA_ARGS__); \
+						cmlogN(_contentFg, _level, CTLOG_MODULE_NAME, __FILE__, __OS_FUNC__, __LINE__, _fmtStr "\n", ##__VA_ARGS__); \
 					} \
 				} while (0)
 
@@ -151,7 +152,7 @@ do { \
 					} \
 				} while (0)
 
-void cmlogN(int logLevel, const char* modName, char* file, const char* func, int line, const char* fmtStr, ...);
+void cmlogN(int content_only, int logLevel, const char* modName, char* file, const char* func, int line, const char* fmtStr, ...);
 void cmlogSPN(int logLevel, const char* modName, char* file, const char* func, int line, log_sp_arg_e splType, unsigned int splVal, const char* fmtStr, ...);
 void cmlogH(int logLevel, const char* modName, char* file, const char* func, int line, const char* fmtStr, const char* hexdump, int hexlen, ...);
 

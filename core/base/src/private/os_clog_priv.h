@@ -18,7 +18,7 @@ extern "C" {
 
 PRIVATE const char* g_logStr[MAX_LOG_LEVEL] = { "NONE", "FATAL", "ERROR", "WARN", "INFO", "DEBUG", "TRACE"};
 
-#define CLOG_SEGFAULT_STR "Segmentation Fault Occurred\n%s"
+#define CLOG_SEGFAULT_STR "Segmentation Fault Occurred:"
 
 #define MAX_FILE_SIZE  			        3145728 /* 3MB 3145728*/
 #define CLOG_FIXED_LENGTH_BUFFER_SIZE   512

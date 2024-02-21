@@ -61,3 +61,9 @@ _EXIT_API_ void os_core_terminate(void)
 #endif
 	fprintf(stderr, "os_core_terminate exit\n");
 }
+
+_EXIT_API_ void os_core_callback(void (*termFunc)(void))
+{
+	atexit(termFunc);
+}
+

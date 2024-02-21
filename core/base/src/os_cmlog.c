@@ -1,6 +1,6 @@
 /************************************************************************
  *File name: os_cmlog.c
- *Description:CMLOG_ALLOW_CONSOLE_LOGS
+ *Description:CMLOG_ALLOW_CONSOLE_LOGS + CMLOG_ALLOW_CLOCK_TIME
  *
  *Current Version:
  *Author: Created by sjw --- 2024.02
@@ -131,34 +131,27 @@ PRIVATE void cmlog_flush_data(int sig)
 PRIVATE void cmlog_catch_segViolation(int sig)
 {
 #if HAVE_BACKTRACE
-	int i, nStrLen, nDepth;
+	int i, nDepth;
 
 	void 	*stackTraceBuf[CLOG_MAX_STACK_DEPTH];
 	const char* sFileNames[CLOG_MAX_STACK_DEPTH];
 	const char* sFunctions[CLOG_MAX_STACK_DEPTH];
 
 	char **strings; 
-    char buf[CLOG_MAX_STACK_DEPTH*128] = {0};
 
 	nDepth = backtrace(stackTraceBuf, CLOG_MAX_STACK_DEPTH);
 
-
 	strings = (char**) backtrace_symbols(stackTraceBuf, nDepth);
+	CMLOGX(FATAL, CLOG_SEGFAULT_STR);
 
 	if(strings){
-		for(i = 0, nStrLen=0; i < nDepth; i++)
+		for(i = 0; i < nDepth; i++)
 		{
 			sFunctions[i] = (strings[i]);
 			sFileNames[i] = "unknown file";
 
-			//CMLOGX(FATAL, "%s", strings[i]);
-			//printf("BT[%d] : len [%d]: %s\n",i, strlen(sFunctions[i]),strings[i]);
-			sprintf(buf+nStrLen, "	 in Function %s (from %s)\n", sFunctions[i], sFileNames[i]);
-			nStrLen += strlen(sFunctions[i]) + strlen(sFileNames[i]) + 15;
+			CMPRINT(FATAL, "BT[%d] : in Function %s (from %s)",i, sFunctions[i], sFileNames[i]);
 		}
-	
-		CMLOGX(FATAL, CLOG_SEGFAULT_STR, buf);
-
 		free(strings);
 	}
 #endif
@@ -173,8 +166,20 @@ PRIVATE void cmlog_timestamp(char* ts)
     os_gettimeofday(&tv);
     os_localtime(tv.tv_sec, &tm);
 
+   	sprintf(ts,"%04d/%02d/%02d %02d:%02d:%02d.%03d", tm.tm_year+1900, tm.tm_mon+1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec, (int)(tv.tv_usec/1000));
+}
+
+PRIVATE void cmlog_timestamp_name(char* ts)
+{
+    struct timeval tv;
+    struct tm tm;
+
+    os_gettimeofday(&tv);
+    os_localtime(tv.tv_sec, &tm);
+
    	sprintf(ts,"%04d%02d%02d_%02d:%02d:%02d.%03d", tm.tm_year+1900, tm.tm_mon+1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec, (int)(tv.tv_usec/1000));
 }
+
 
 #ifdef CMLOG_ALLOW_CONSOLE_LOGS
 PRIVATE void cmlog_add_stderr(void)
@@ -194,7 +199,7 @@ PRIVATE void cmlog_create_new_log_file(void)
    DIR *dir = NULL;
 
    /* get current time, when file is created */
-   cmlog_timestamp(curTime);
+   cmlog_timestamp_name(curTime);
 
    //cm no need
    /*temptr = strchr(curTime, '.');
@@ -473,7 +478,7 @@ PRIVATE void cmlog_hex_to_asii(char* p, const char* h, int hexlen)
    }
 }
 
-void cmlogN(int logLevel, const char* modName, char* file, const char* func, int line, const char* fmtStr, ...)
+void cmlogN(int content_only, int logLevel, const char* modName, char* file, const char* func, int line, const char* fmtStr, ...)
 {
 	va_list argList;
 	void *szLog = NULL;
@@ -483,14 +488,16 @@ void cmlogN(int logLevel, const char* modName, char* file, const char* func, int
 		g_logsLostCnt++;
 		return;
 	}
-
+	if(!content_only){
 #ifdef CMLOG_ALLOW_CLOCK_TIME
-	unsigned char szTime[CLOG_MAX_TIME_STAMP] = {0};
-	cmlog_timestamp(szLog);
-	snprintf(szLog, CLOG_FIXED_LENGTH_BUFFER_SIZE, "[%s][%s]%s:%s:%d %s:", szTime, modName, basename(file), func, line, g_logStr[logLevel]);
+		char szTime[CLOG_MAX_TIME_STAMP] = {0};
+		cmlog_timestamp(szTime);
+		snprintf(szLog, CLOG_FIXED_LENGTH_BUFFER_SIZE, "[%s] [%s] %s:%d %s:", szTime, modName, basename(file), line, g_logStr[logLevel]);
 #else
-	snprintf(szLog, CLOG_FIXED_LENGTH_BUFFER_SIZE, "[%u][%s]%s:%s:%d %s:", numTtiTicks, modName, basename(file), func, line, g_logStr[logLevel]);
+		snprintf(szLog, CLOG_FIXED_LENGTH_BUFFER_SIZE, "[%u] [%s] %s:%d %s:", numTtiTicks, modName, basename(file), line, g_logStr[logLevel]);
 #endif
+	}
+
 
 	va_start(argList,fmtStr);
 	vsnprintf(szLog + strlen(szLog), CLOG_FIXED_LENGTH_BUFFER_SIZE - strlen(szLog), fmtStr, argList);
@@ -511,11 +518,11 @@ void cmlogSPN(int logLevel, const char* modName, char* file, const char* func, i
 	}
 
 #ifdef CMLOG_ALLOW_CLOCK_TIME
-	unsigned char szTime[CLOG_MAX_TIME_STAMP] = {0};
-	cmlog_timestamp(szLog);
-    snprintf(szLog, CLOG_FIXED_LENGTH_BUFFER_SIZE, "[%s][%s]%s:%s:%d %s:%s:%d:", szTime, modName, basename(file), func, line, g_logStr[logLevel], g_splStr[splType].name, splVal);
+	char szTime[CLOG_MAX_TIME_STAMP] = {0};
+	cmlog_timestamp(szTime);
+    snprintf(szLog, CLOG_FIXED_LENGTH_BUFFER_SIZE, "[%s] [%s] %s:%d %s:%s:%d:", szTime, modName, basename(file), line, g_logStr[logLevel], g_splStr[splType].name, splVal);
 #else
-    snprintf(szLog, CLOG_FIXED_LENGTH_BUFFER_SIZE, "[%u][%s]%s:%s:%d %s:%s:%d:", numTtiTicks, modName, basename(file), func, line, g_logStr[logLevel], g_splStr[splType].name, splVal);
+    snprintf(szLog, CLOG_FIXED_LENGTH_BUFFER_SIZE, "[%u] [%s] %s:%d %s:%s:%d:", numTtiTicks, modName, basename(file), line, g_logStr[logLevel], g_splStr[splType].name, splVal);
 #endif
     va_start(argList,fmtStr);
     vsnprintf(szLog + strlen(szLog), CLOG_FIXED_LENGTH_BUFFER_SIZE - strlen(szLog), fmtStr, argList);
@@ -538,11 +545,11 @@ void cmlogH(int logLevel, const char* modName, char* file, const char* func, int
 	cmlog_hex_to_asii(szHex, hexdump, hexlen);
 
 #ifdef CMLOG_ALLOW_CLOCK_TIME
-	unsigned char szTime[CLOG_MAX_TIME_STAMP] = {0};
-	cmlog_timestamp(szLog);
-	snprintf(szLog, CLOG_FIXED_LENGTH_BUFFER_SIZE, fmtStr, szTime, modName, basename(file), func, line, g_logStr[logLevel], szHex);
+	char szTime[CLOG_MAX_TIME_STAMP] = {0};
+	cmlog_timestamp(szTime);
+	snprintf(szLog, CLOG_FIXED_LENGTH_BUFFER_SIZE, fmtStr, szTime, modName, basename(file), line, g_logStr[logLevel], szHex);
 #else
-	snprintf(szLog, CLOG_FIXED_LENGTH_BUFFER_SIZE, fmtStr, numTtiTicks, modName, basename(file), func, line, g_logStr[logLevel], szHex);
+	snprintf(szLog, CLOG_FIXED_LENGTH_BUFFER_SIZE, fmtStr, numTtiTicks, modName, basename(file), line, g_logStr[logLevel], szHex);
 #endif
 
 	cmlog_save_log_data((const void*)szLog, strlen(szLog)); 

@@ -27,10 +27,12 @@ extern "C" {
 #define OS_MAX_PKT_LEN                 2048
 /***************log**********************/
 #if defined(OS_USE_CDLOG)
+#define os_print   cdlog_print
 #define os_log     cdlog_show
 #define os_logsp   cdlog_show_sp
 #define os_logh    cdlog_hexdump
 #elif defined(OS_USE_CMLOG)
+#define os_print   CMPRINT
 #define os_log     CMLOGX
 #define os_logsp   CMLOGSPX
 #define os_logh    CMLOGH
