@@ -21,7 +21,8 @@ PRIVATE const char* g_logStr[MAX_LOG_LEVEL] = { "NONE", "FATAL", "ERROR", "WARN"
 #define CLOG_SEGFAULT_STR "Segmentation Fault Occurred\n%s"
 
 #define MAX_FILE_SIZE  			        3145728 /* 3MB 3145728*/
-#define MAX_LOG_LEN				        256
+#define CLOG_FIXED_LENGTH_BUFFER_SIZE   512
+#define CLOG_FIXED_LENGTH_BUFFER_NUM    10240
 #define MAX_FILENAME_LEN 		        300
 #define MAX_FILENAME_LENGTH 	        700
 #define LOG_TIME_LEN 			        64
@@ -34,14 +35,12 @@ PRIVATE const char* g_logStr[MAX_LOG_LEVEL] = { "NONE", "FATAL", "ERROR", "WARN"
 #define CLOG_TIME_ZONE_LEN				8
 #define CLOG_MAX_STACK_DEPTH 		    24
 #define CLOG_MAX_BACKTRACE_BUFSZ	    2048
-#define CLOG_FIXED_LENGTH_BUFFER_SIZE   MAX_LOG_LEN
-#define CLOG_FIXED_LENGTH_BUFFER_NUM    10240
-#define CLOG_READ_POS_THRESHOLD         ((CLOG_FIXED_LENGTH_BUFFER_NUM/10)*CLOG_FIXED_LENGTH_BUFFER_SIZE)
-#define CLOG_MAX_CIRBUF_SIZE			(CLOG_FIXED_LENGTH_BUFFER_NUM*CLOG_FIXED_LENGTH_BUFFER_SIZE)
+//#define CLOG_READ_POS_THRESHOLD       ((CLOG_FIXED_LENGTH_BUFFER_NUM/10)*CLOG_FIXED_LENGTH_BUFFER_SIZE)
+//#define CLOG_MAX_CIRBUF_SIZE			(CLOG_FIXED_LENGTH_BUFFER_NUM*CLOG_FIXED_LENGTH_BUFFER_SIZE)
 #define CLOGTICKSCNTTOPRCLOGS           10
 
-/*L2 Logging */
-#define CLOG_LIMIT_COUNT   50
+/*Limit Logging */
+#define CLOG_LIMIT_COUNT   200
 
 #define TA_NOR              "\033[0m"       /* all off */
 #define TA_FGC_BLACK        "\033[30m"      /* Black */
@@ -58,12 +57,6 @@ PRIVATE const char* g_logStr[MAX_LOG_LEVEL] = { "NONE", "FATAL", "ERROR", "WARN"
 #define TA_FGC_BOLD_WHITE   "\033[1;37m"    /* Bold White  */
 #define TA_FGC_DEFAULT      "\033[39m"      /* default */
 
-typedef enum {
-	LOG_ARG_INT,
-	LOG_ARG_STR,
-	LOG_ARG_HEX,
-	LOG_ARG_SPL
-} LOG_ARG_TYPE;
 	
 typedef enum cLogCntLmt
 {
@@ -72,14 +65,6 @@ typedef enum cLogCntLmt
 }cLogCntLmt;
 
 typedef enum _endian {little_endian, big_endian} EndianType;
-
-
-typedef struct {
-	char	szTaskName[CLOG_MAX_TAX_NAME];
-	unsigned char*	logBuff;	/* LOG Buffer */
-	unsigned int	logBufLen;	/* Data Written till now */
-	unsigned int	logReadPos; /* Reader thread position */
-} THREAD_DATA;
 
 
 #ifdef __cplusplus

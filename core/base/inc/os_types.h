@@ -30,10 +30,6 @@ extern "C" {
 #define os_log     cdlog_show
 #define os_logsp   cdlog_show_sp
 #define os_logh    cdlog_hexdump
-#elif defined(OS_USE_CTLOG)
-#define os_log     CTLOGX
-#define os_logsp   CTLOGSPX
-#define os_logh    CTLOGH
 #elif defined(OS_USE_CMLOG)
 #define os_log     CMLOGX
 #define os_logsp   CMLOGSPX

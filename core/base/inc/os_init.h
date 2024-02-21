@@ -54,6 +54,10 @@
 #include "os_sctp.h"
 #include "os_poll.h"
 #include "os_notify.h"
+#include "os_queue.h"
+#include "os_ring.h"
+
+
 
 #undef OS_BASE_INSIDE
 

@@ -9,7 +9,6 @@ set(SRC_FILES
 	os_str.c
 	os_time.c
 	os_cdlog.c
-	os_ctlog.c
 	os_cmlog.c
 	os_list.c
 	os_hash.c
@@ -29,6 +28,8 @@ set(SRC_FILES
 	os_select.c
 	os_poll.c
 	os_notify.c
+	os_queue.c
+	os_ring.c
 	os_init.c
 )
 

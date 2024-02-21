@@ -1,6 +1,6 @@
 /************************************************************************
  *File name: os_cmlog.c
- *Description:
+ *Description:CMLOG_ALLOW_CONSOLE_LOGS
  *
  *Current Version:
  *Author: Created by sjw --- 2024.02
@@ -17,42 +17,33 @@
 
 
 PRIVATE FILE* g_fp = NULL;        /* global file pointer */
-PRIVATE int  g_fd;                /* Global file descriptor for L2 & L3 */
+PRIVATE int  g_fd;                /* Global file descriptor */
+PRIVATE int  g_readyFg = 0;
 PRIVATE char g_logDir[MAX_FILENAME_LEN] = "/var/log";
 PRIVATE char g_fileName[MAX_FILENAME_LEN] = "cmem";
 PRIVATE char g_fileList[CLOG_MAX_FILES][MAX_FILENAME_LENGTH];
-
 PRIVATE unsigned char g_nMaxLogFiles = 1;                       /* MAX Log Files 1 */
 PRIVATE unsigned int g_uiMaxFileSizeLimit = MAX_FILE_SIZE;      /* Max File Size limit for each log file */
-PRIVATE unsigned int g_cirMaxBufferSize = CLOG_MAX_CIRBUF_SIZE; /* Default circular buffer size 100Kb*/
-PRIVATE unsigned int g_cirMaxBufferDep = 0; /* Default circular buffer size 100Kb*/
-
 PRIVATE int g_nCurrFileIdx = 0;           /* Current File Number index */
-
-//PRIVATE os_thread_mutex_t g_logmutex; /* Mutex to protect circular buffers */
-PRIVATE os_thread_mutex_t g_condmutex;
-PRIVATE os_thread_cond_t g_cond;
-
-PRIVATE THREAD_DATA *g_pSingCirBuff = NULL;
-PRIVATE unsigned short g_prevLogOffset=0;
-PRIVATE int g_threadRunFg = 1;
-
-PRIVATE unsigned char g_writeCirBuf = 0;
-PRIVATE volatile unsigned int g_clogPositionIndex=0;
 
 PRIVATE unsigned int g_clogWriteCount = 0;
 PRIVATE unsigned int g_maxClogCount   = 50;
 PRIVATE unsigned int g_logsDropCnt    = 0;
-PRIVATE cLogCntLmt   g_cLogCntLimit  = CLOG_COUNT_LIMIT_STOP;
-PRIVATE unsigned int g_clogTimeout    = CLOG_CIRBUF_READ_INTERVAL;
+PRIVATE unsigned int g_logsLostCnt    = 0;
+PRIVATE cLogCntLmt   g_cLogCntLimit   = CLOG_COUNT_LIMIT_STOP;
+PRIVATE unsigned int g_cirBufferDepth = CLOG_FIXED_LENGTH_BUFFER_NUM;
 
 PRIVATE unsigned int numTtiTicks;     /* TTI Count */
-PRIVATE int thread_signalled;
+//PRIVATE int thread_signalled;
+
+PRIVATE os_ring_queue_t  *log_queue = NULL;
+PRIVATE os_ring_buf_t    *log_buf = NULL;
+typedef unsigned char cmlog_buffer_t[CLOG_FIXED_LENGTH_BUFFER_SIZE];
 
 PRIVATE void cmlog_create_new_log_file(void);
-PRIVATE void cmlog_read_cirbuf(void);
+PRIVATE void cmlog_read_cirbuf(cmlog_buffer_t pkt , unsigned int len);
 
-PRIVATE int	g_nWrites = 0;                /* number of times log function is called */
+PRIVATE int	g_nWrites = 0;  /* number of times log function is called */
 
 #define CHECK_CIRFILE_SIZE if(++g_nWrites == CLOG_LIMIT_COUNT/2)    \
 	{ \
@@ -62,168 +53,46 @@ PRIVATE int	g_nWrites = 0;                /* number of times log function is cal
 		} \
 	}
 
-PRIVATE void cmlog_deregister_res(void* argv)
+PRIVATE void cmlog_deregister_res(void)
 {
-	THREAD_DATA* pThrData = (THREAD_DATA*)(argv);
+	//g_readyFg = 0;
+	os_ring_buf_destroy(log_buf);
+	os_ring_queue_destroy(log_queue);
+}
 
-	if(argv == NULL)
+PRIVATE void cmlog_register_res(void)
+{
+	log_queue = os_ring_queue_create(g_cirBufferDepth);
+	log_buf = os_ring_buf_create(g_cirBufferDepth, sizeof(cmlog_buffer_t));
+	if(NULL == log_buf)
+	{
+		os_ring_queue_destroy(log_queue);
+		return;	
+	}
+	g_readyFg = 1;
+}
+
+PRIVATE void cmlog_read_cirbuf(cmlog_buffer_t pkt , unsigned int len)
+{
+	if(NULL == pkt || 0 == len){
 		return;
-
-	if(pThrData->logBuff != NULL)
-		free(pThrData->logBuff);
-
-	free(pThrData);
-
-	os_thread_mutex_destroy(&g_condmutex);
-}
-
-
-PRIVATE THREAD_DATA* cmlog_register_res(const char* taskName)
-{
-	THREAD_DATA* pThrData = (THREAD_DATA*) malloc(sizeof(THREAD_DATA));
-
-	if(pThrData == NULL) {
-		fprintf(stderr, "Failed to allocate memory for thread %s\n", taskName);
-		_exit(0);
 	}
 
-
-	/* Allocate circular buffer */
-	pThrData->logBuff = (unsigned char*) malloc(g_cirMaxBufferSize);
-
-	if(pThrData->logBuff == NULL) {
-		fprintf(stderr, "Failed to allocate memory [%d] for thread %s\n",g_cirMaxBufferSize, taskName);
-		_exit(0);
-	}
-
-	/* store task name */
-	strcpy(pThrData->szTaskName, taskName);
-
-
-	//fprintf(stderr, "rlRegisterThread: allocated CIRCULAR BUFFER of size [%ld]\n", g_cirMaxBufferSize);
-	//fprintf(stderr, "rlRegisterThread: Total registered threads [%d]\n", g_nThreadsRegistered);
-
-	return pThrData;
-}
-
-PRIVATE void* cmlog_cirbuf_read_thread(void* arg)
-{
-	struct timespec to;
-	struct timeval	tv;
-	os_time_t usec;
-	int retCode;
-
-	//fprintf(stderr, "Circular Buffer Reader thread started\n");
-
-	while(g_threadRunFg)
-	{
-		/*this thread is not active and waiting to timeout */
-		thread_signalled = 0;
-
-		/* set the thread timeout */
-		gettimeofday(&tv, NULL);
-
-		usec = tv.tv_sec*1000000LL + tv.tv_usec + g_clogTimeout;
-		
-		to.tv_sec = usec / 1000000LL;
-		to.tv_nsec = (usec % 1000000LL) * 1000;
-
-		//timeout.tv_sec = time(NULL) + CLOG_CIRBUF_READ_INTERVAL;
-		//timeout.tv_nsec = 0;
-
-		os_thread_mutex_lock(&g_condmutex);
-
-		/* wait for CLOG_CIRBUF_READ_INTERVAL seconds time interval to read buffer */
-		retCode = pthread_cond_timedwait(&g_cond, &g_condmutex, &to);
-		os_thread_mutex_unlock(&g_condmutex);
-
-		/* this means, this thread is already active, no need to give any other signal to wake up */
-		thread_signalled = 1;
-
-		//if(retCode == 0) fprintf(stderr, "cirBufReaderThread: I am signalled to read data\n");
-
-		/* If someone has given signal or there is timeout */
-		if(retCode == 0 || retCode  == ETIMEDOUT){
-			cmlog_read_cirbuf();
-			continue;
-		}
-
-		//cmlog_read_cirbuf();
-
-		fprintf(stderr, "cirbuf_read_thread is exiting[%d]\n", retCode);
-		perror("cirbuf_read_thread");
-
-		break;
-	}
-
-	return NULL;
-}
-
-PRIVATE void cmlog_read_cirbuf(void)
-{
-	unsigned int  l, writerPos;
-
-	g_writeCirBuf = 1;
-
-	THREAD_DATA* pThrData = g_pSingCirBuff;
-
-	if(pThrData == NULL)
-	 return;
-
-	writerPos = pThrData->logBufLen;
-	if(0 != writerPos % CLOG_FIXED_LENGTH_BUFFER_SIZE){
-	  fprintf(stderr, "writerPos[%d] length illegal\n", writerPos);
-	  return;
-	}
-
-	//fprintf(stderr, "Thread [%ld] WritePos:[%ld] ReadPos:[%ld]\n", i+1, writerPos, pThrData->logReadPos);
-
-	if(pThrData->logReadPos < writerPos)
-	{
-		 /* Calculate the delta data to be read from buffer */
-		 int dataLen = writerPos - pThrData->logReadPos;
-
-		 if(0 != dataLen % CLOG_FIXED_LENGTH_BUFFER_SIZE){
-			 fprintf(stderr, "dataLen[%d] illegal\n", dataLen);
-			 return;
-		 }
-
-		 /* Write the data into file */
-		 for (l = 0; l < dataLen / CLOG_FIXED_LENGTH_BUFFER_SIZE; ++l) {
-			 fprintf(g_fp, "%s", pThrData->logBuff+pThrData->logReadPos + l*CLOG_FIXED_LENGTH_BUFFER_SIZE);
-		 }
-
-		 /* reset log read position to last known position */
-		 pThrData->logReadPos = writerPos;
-	}
-	else if (pThrData->logReadPos > writerPos) 
-	{
-		 /* Calculate the remaining data left in the buffer */
-		 int dataLen = g_cirMaxBufferSize -  pThrData->logReadPos;
-
-		 if(0 != dataLen % CLOG_FIXED_LENGTH_BUFFER_SIZE){
-			 fprintf(stderr, "dataLen[%d] illegal\n", dataLen);
-			 return;
-		 }
-
-		 /* Write from last know position till end */
-		 for (l = 0; l < dataLen / CLOG_FIXED_LENGTH_BUFFER_SIZE; ++l) {
-			 fprintf(g_fp, "%s", pThrData->logBuff+pThrData->logReadPos + l*CLOG_FIXED_LENGTH_BUFFER_SIZE);
-		 }
-
-
-		 /* Write from 0 to len position */
-		 for (l = 0; l < writerPos / CLOG_FIXED_LENGTH_BUFFER_SIZE; ++l) {
-			 fprintf(g_fp, "%s", pThrData->logBuff + l*CLOG_FIXED_LENGTH_BUFFER_SIZE);
-		 }
-
-		 /* reset log read position to last known position */
-		 pThrData->logReadPos = writerPos;
-	}
+	fprintf(g_fp, "%s", pkt);
 
 	CHECK_CIRFILE_SIZE
+}
 
-	g_writeCirBuf = 0;
+PRIVATE void cmlog_read_final(void)
+{
+	unsigned char *pkt = NULL;
+	unsigned int len = 0;
+
+	//no block
+	while ((os_ring_queue_try_get(log_queue, &pkt, &len) == OS_OK) && pkt && len) {
+		cmlog_read_cirbuf(pkt, len);
+	}
+
 }
 
 /*PRIVATE EndianType cmlog_getCPU_endian(void)
@@ -239,9 +108,9 @@ PRIVATE void cmlog_read_cirbuf(void)
 
 PRIVATE void cmlog_flush_data(int sig)
 {
-	g_threadRunFg = 0;
+	g_readyFg = 0;
 
-	cmlog_read_cirbuf();
+	cmlog_read_final();
 
 	g_clogWriteCount = 0;
 
@@ -313,6 +182,15 @@ PRIVATE void cmlog_timestamp(char* ts)
    	sprintf(ts,"%04d%02d%02d_%02d:%02d:%02d.%03d", tm.tm_year+1900, tm.tm_mon+1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec, (int)(tv.tv_usec/1000));
 }
 
+#ifdef CMLOG_ALLOW_CONSOLE_LOGS
+PRIVATE void cmlog_add_stderr(void)
+{
+	os_cmlog_set_filename("stderr");
+	g_fp = stderr;
+    return;
+}
+#endif
+
 PRIVATE void cmlog_create_new_log_file(void)
 {
    FILE *fp, *prev_fp = g_fp;
@@ -378,9 +256,52 @@ PRIVATE void cmlog_create_new_log_file(void)
 
 }
 
-PRIVATE void cmlog_printf_drop_num(void)
+PRIVATE void cmlog_printf_static(void)
 {
 	fprintf(stderr, "Log drop count:\t\t[%d]\n", g_logsDropCnt);
+	fprintf(stderr, "Log lost count:\t\t[%d]\n", g_logsLostCnt);
+	os_ring_queue_show(log_queue);
+	os_ring_buf_show(log_buf);
+}
+
+/*/var/lib/apport/coredump*/
+PRIVATE void cmlog_enable_coredump(bool enable_core)
+{
+#ifdef HAVE_SETRLIMIT
+	struct rlimit core_limits;
+	core_limits.rlim_cur = core_limits.rlim_max = enable_core ? RLIM_INFINITY : 0;
+	setrlimit(RLIMIT_CORE, &core_limits);
+#endif
+}
+
+PRIVATE void* cmlog_cirbuf_read_thread(void* arg)
+{
+	unsigned char *pkt = NULL;
+	unsigned int len = 0;
+    int rv = OS_ERROR;
+
+	//fprintf(stderr, "Circular Buffer Reader thread started\n");
+
+	while(g_readyFg)
+	{
+		//no block
+		rv = os_ring_queue_try_get(log_queue, &pkt, &len);
+		if(rv != OS_OK)
+		{
+	       if (rv == OS_DONE)
+		   	   break;
+
+		   if (rv == OS_RETRY){
+			   continue;
+		   }
+		}
+		cmlog_read_cirbuf(pkt, len);
+		os_ring_buf_ret(pkt);
+		pkt = NULL;
+		len = 0;
+	}
+
+	return NULL;
 }
 
 void os_cmlog_set_filesize_limit(unsigned int maxFileSize)
@@ -402,16 +323,9 @@ void os_cmlog_set_log_path(const char* logDir)
 	strncpy(g_logDir, logDir, MAX_FILENAME_LEN);
 }
 
-void os_cmlog_set_log_refresh_ustime(os_time_t timeout)
+void os_cmlog_set_cirbuf_depth(unsigned int depth)
 {
-	if(timeout > 0){
-		g_clogTimeout = timeout;
-	}
-}
-
-void os_cmlog_set_cirbuf_dep(unsigned int bufNum)
-{
-	g_cirMaxBufferSize = bufNum*CLOG_FIXED_LENGTH_BUFFER_SIZE;
+	g_cirBufferDepth = depth;
 }
 
 void os_cmlog_printf_config(void)
@@ -422,7 +336,7 @@ void os_cmlog_printf_config(void)
 	fprintf(stderr, "Maximum Log Files:\t[%d]\n", g_nMaxLogFiles);
 
 	fprintf(stderr, "Memory Logging:\t\t[Enabled]\n");
-	fprintf(stderr, "Circular BufferSize:\t[Actual:%d KB][Derived:%d Byte]\n", g_cirMaxBufferSize/1024, g_cirMaxBufferSize);
+	fprintf(stderr, "Circular BufferSize:\t[Actual:%d KB]\n", g_cirBufferDepth * CLOG_FIXED_LENGTH_BUFFER_SIZE/1024);
 }
 
 void os_cmlog_set_filename(const char* fileName)
@@ -448,39 +362,48 @@ void os_cmlog_init(void)
 	signal(SIGBUS,  cmlog_catch_segViolation);
 	signal(SIGINT,  cmlog_flush_data);
 
+	cmlog_enable_coredump(true);
+
 	g_maxClogCount = CLOG_LIMIT_COUNT;
 
-	os_cmlog_printf_config();
+	cmlog_register_res();
 
-	g_pSingCirBuff = cmlog_register_res("CMLOG_BUFF");
+	if(!g_readyFg){
+		fprintf(stderr, "Failed to initialize log resource\n");
+		exit(0);
+	}
 
+#ifdef CMLOG_ALLOW_CONSOLE_LOGS
+	cmlog_add_stderr();
+#else
 	cmlog_create_new_log_file();
+#endif
 
-	os_thread_mutex_init(&g_condmutex);
 	if(pthread_create(&tid, NULL, cmlog_cirbuf_read_thread, NULL) != 0) {
 		fprintf(stderr, "Failed to initialize log server thread\n");
 		exit(0);
 	}
+
+	os_cmlog_printf_config();
 
 }
 
 
 void os_cmlog_final(void)
 {
-	g_threadRunFg = 0;
-	os_thread_mutex_lock(&g_condmutex);
-	pthread_cond_signal(&g_cond); /* this will wakeup thread */
-	os_thread_mutex_unlock(&g_condmutex);
+	g_readyFg = 0;
 
-	cmlog_read_cirbuf();
+	//os_ring_queue_term(log_queue); //all no block,no need term
+
+	cmlog_read_final();
 
 	if(g_fp){
 		fflush(g_fp);
 		fclose(g_fp);
 		g_fp = NULL;
 	}
-	cmlog_printf_drop_num();
-	cmlog_deregister_res(g_pSingCirBuff);
+	cmlog_printf_static();
+	cmlog_deregister_res();
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -532,81 +455,20 @@ void os_cmlog_update_ticks(void)
    return;
 }
 
-PRIVATE void cmlog_save_log_data(const void* buf, unsigned short len, unsigned int g_clogWritePosIndex)
+PRIVATE void cmlog_save_log_data(const void* buf, unsigned int len)
 {
    ++g_clogWriteCount ;
 
-   if((1 == g_writeCirBuf) || \
-         ((g_cLogCntLimit == CLOG_COUNT_LIMIT_START) && (g_clogWriteCount > g_maxClogCount)) || \
-         (len > CLOG_FIXED_LENGTH_BUFFER_SIZE))
-   {
-      g_clogPositionIndex --;
+   if(((g_cLogCntLimit == CLOG_COUNT_LIMIT_START) && (g_clogWriteCount > g_maxClogCount)) || \
+        (len > CLOG_FIXED_LENGTH_BUFFER_SIZE)){
       g_logsDropCnt++;
-
       return;
    }
 
-   unsigned int logWritePointerPosition;
-   THREAD_DATA* p = (THREAD_DATA*) g_pSingCirBuff;
-
-   /* if buffer is about to full, write till end and continue writing from begining */
-   if(((g_clogWritePosIndex+1) * CLOG_FIXED_LENGTH_BUFFER_SIZE) > g_cirMaxBufferSize) //100
-   {
-      /* setting this flag to 1 to avoid other threads
-         to write in same circular buffer */
-      g_writeCirBuf = 1;
-      /* Start globalPositionIndex again */
-      g_clogPositionIndex = 0;
-
-      /* if reader has not read initial data, minmum buffer size should be 5Kb */
-      if((p->logReadPos < CLOG_READ_POS_THRESHOLD) && !thread_signalled) {
-		os_thread_mutex_lock(&g_condmutex);
-		pthread_cond_signal(&g_cond); /* this will wakeup thread */
-		os_thread_mutex_unlock(&g_condmutex);
-      }
-
-      /* we are unlikely to hit this condition, but to prevent corruption of logs */
-      /* we cannot write the data, if we write, data will be corrected forever */
-      if(p->logReadPos < CLOG_FIXED_LENGTH_BUFFER_SIZE) {
-         fprintf(stderr, "cannot write data, need expand memory or shorten refresh time\n");
-         return;
-      }
-
-      /* Copy data from the start of buffer */
-      memcpy(p->logBuff, buf, len);
-      /* Store buffer length position */
-      p->logBufLen = CLOG_FIXED_LENGTH_BUFFER_SIZE;
-	  g_cirMaxBufferDep++;
-
-	  g_clogPositionIndex = 1;
-      g_prevLogOffset = 0;
-      /* setting this flag to 0 so that other threads
-         will start writing in circular buffer */
-      g_writeCirBuf = 0;
-   }
-   else //0
-   {
-      /* if reader is far behind and writer is reaching reader position, diff < 5Kb */
-      /* its time to wakeup thread if reader has not read much of data */
-      if((p->logReadPos > p->logBufLen) && ((p->logReadPos - p->logBufLen) < CLOG_READ_POS_THRESHOLD)){
-		os_thread_mutex_lock(&g_condmutex);
-		pthread_cond_signal(&g_cond); /* this will wakeup thread */
-		os_thread_mutex_unlock(&g_condmutex);
-	  }
-
-      logWritePointerPosition = (g_clogWritePosIndex * CLOG_FIXED_LENGTH_BUFFER_SIZE) + g_prevLogOffset;
-
-      memcpy(p->logBuff+logWritePointerPosition, buf, len);
-      p->logBufLen += CLOG_FIXED_LENGTH_BUFFER_SIZE;
-	  g_cirMaxBufferDep++;
-   }
-
-   if(g_cirMaxBufferDep == CLOG_FIXED_LENGTH_BUFFER_NUM){
-	   os_thread_mutex_lock(&g_condmutex);
-	   pthread_cond_signal(&g_cond); /* this will wakeup thread */
-	   os_thread_mutex_unlock(&g_condmutex);
-	   g_cirMaxBufferDep = 0;
-   }
+	if (OS_OK != os_ring_queue_try_put(log_queue, (unsigned char *)buf, len)) {
+		//g_logsLostCnt++;
+		os_ring_buf_ret((unsigned char *)buf);
+	}	 
 }
 
 PRIVATE void cmlog_hex_to_asii(char* p, const char* h, int hexlen)
@@ -619,40 +481,74 @@ PRIVATE void cmlog_hex_to_asii(char* p, const char* h, int hexlen)
 void cmlogN(int logLevel, const char* modName, char* file, const char* func, int line, const char* fmtStr, ...)
 {
 	va_list argList;
-	char szLog[MAX_LOG_LEN] = {0};
+	void *szLog = NULL;
 
-	snprintf(szLog, MAX_LOG_LEN, "[%u][%s]%s:%s:%d %s:", numTtiTicks, modName, basename(file), func, line, g_logStr[logLevel]);
+	szLog = (void *)os_ring_buf_get(log_buf);
+	if(NULL == szLog) {
+		g_logsLostCnt++;
+		return;
+	}
+
+#ifdef CMLOG_ALLOW_CLOCK_TIME
+	unsigned char szTime[CLOG_MAX_TIME_STAMP] = {0};
+	cmlog_timestamp(szLog);
+	snprintf(szLog, CLOG_FIXED_LENGTH_BUFFER_SIZE, "[%s][%s]%s:%s:%d %s:", szTime, modName, basename(file), func, line, g_logStr[logLevel]);
+#else
+	snprintf(szLog, CLOG_FIXED_LENGTH_BUFFER_SIZE, "[%u][%s]%s:%s:%d %s:", numTtiTicks, modName, basename(file), func, line, g_logStr[logLevel]);
+#endif
 
 	va_start(argList,fmtStr);
-	vsnprintf(szLog + strlen(szLog), MAX_LOG_LEN - strlen(szLog), fmtStr, argList);
+	vsnprintf(szLog + strlen(szLog), CLOG_FIXED_LENGTH_BUFFER_SIZE - strlen(szLog), fmtStr, argList);
 	va_end(argList);
 
-	cmlog_save_log_data((const void*)szLog, strlen(szLog), g_clogPositionIndex++); 
+	cmlog_save_log_data((const void*)szLog, strlen(szLog)); 
 }
 
 void cmlogSPN(int logLevel, const char* modName, char* file, const char* func, int line, log_sp_arg_e splType, unsigned int splVal, const char* fmtStr, ...)
 {
 	va_list argList;
-	char szLog[MAX_LOG_LEN] = {0};
+	void *szLog = NULL;
 
-    snprintf(szLog, MAX_LOG_LEN, "[%u][%s]%s:%s:%d %s:%s:%d:", numTtiTicks, modName, basename(file), func, line, g_logStr[logLevel], g_splStr[splType].name, splVal);
+	szLog = (void *)os_ring_buf_get(log_buf);
+	if(NULL == szLog) {
+		g_logsLostCnt++;
+		return;
+	}
 
+#ifdef CMLOG_ALLOW_CLOCK_TIME
+	unsigned char szTime[CLOG_MAX_TIME_STAMP] = {0};
+	cmlog_timestamp(szLog);
+    snprintf(szLog, CLOG_FIXED_LENGTH_BUFFER_SIZE, "[%s][%s]%s:%s:%d %s:%s:%d:", szTime, modName, basename(file), func, line, g_logStr[logLevel], g_splStr[splType].name, splVal);
+#else
+    snprintf(szLog, CLOG_FIXED_LENGTH_BUFFER_SIZE, "[%u][%s]%s:%s:%d %s:%s:%d:", numTtiTicks, modName, basename(file), func, line, g_logStr[logLevel], g_splStr[splType].name, splVal);
+#endif
     va_start(argList,fmtStr);
-    vsnprintf(szLog + strlen(szLog), MAX_LOG_LEN - strlen(szLog), fmtStr, argList);
+    vsnprintf(szLog + strlen(szLog), CLOG_FIXED_LENGTH_BUFFER_SIZE - strlen(szLog), fmtStr, argList);
     va_end(argList);
 
-	cmlog_save_log_data((const void*)szLog, strlen(szLog), g_clogPositionIndex++); 
+	cmlog_save_log_data((const void*)szLog, strlen(szLog)); 
 }
 
 void cmlogH(int logLevel, const char* modName, char* file, const char* func, int line, const char* fmtStr, const char* hexdump, int hexlen, ...)
 {
 	char szHex[MAX_LOG_BUF_SIZE*3] = {0};
-	char szLog[MAX_LOG_LEN] = {0};
+	void *szLog = NULL;
+
+	szLog = (void *)os_ring_buf_get(log_buf);
+	if(NULL == szLog) {
+		g_logsLostCnt++;
+		return;
+	}
 
 	cmlog_hex_to_asii(szHex, hexdump, hexlen);
-	snprintf(szLog, MAX_LOG_LEN, fmtStr, numTtiTicks, modName, basename(file), func, line, g_logStr[logLevel], szHex);
 
-	cmlog_save_log_data((const void*)szLog, strlen(szLog), g_clogPositionIndex++); 
+#ifdef CMLOG_ALLOW_CLOCK_TIME
+	unsigned char szTime[CLOG_MAX_TIME_STAMP] = {0};
+	cmlog_timestamp(szLog);
+	snprintf(szLog, CLOG_FIXED_LENGTH_BUFFER_SIZE, fmtStr, szTime, modName, basename(file), func, line, g_logStr[logLevel], szHex);
+#else
+	snprintf(szLog, CLOG_FIXED_LENGTH_BUFFER_SIZE, fmtStr, numTtiTicks, modName, basename(file), func, line, g_logStr[logLevel], szHex);
+#endif
+
+	cmlog_save_log_data((const void*)szLog, strlen(szLog)); 
 }
-
-
