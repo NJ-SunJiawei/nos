@@ -27,7 +27,7 @@
 
 #define OS_USE_TALLOC 0
 #define OS_USE_CMLOG
-//#define CMLOG_ALLOW_CONSOLE_LOGS
+#define CMLOG_ALLOW_CONSOLE_LOGS
 #define CMLOG_ALLOW_CLOCK_TIME
 
 #include "os_platform.h"

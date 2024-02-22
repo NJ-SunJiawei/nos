@@ -128,6 +128,7 @@ PRIVATE void cmlog_flush_data(int sig)
 	return;
 }
 
+//libunwind
 PRIVATE void cmlog_catch_segViolation(int sig)
 {
 #if HAVE_BACKTRACE
