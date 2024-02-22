@@ -651,19 +651,15 @@ PRIVATE char *cdlog_linefeed(char *buf, char *last)
 
 PRIVATE void file_writer(os_cdlog_t *cdlog, os_cdlog_level_e level, const char *string)
 {
-#ifdef CDLOG_USE_CIRCULAR_BUFFER
-
-#else
     fprintf(cdlog->file.out, "%s", string);
     fflush(cdlog->file.out);//???
 
-	if(++cdlog->file.number == 200){
+	if(++cdlog->file.number == CLOG_LIMIT_COUNT/2){
 		if(cdlog->file.out && ((unsigned int)(ftell(cdlog->file.out)) > g_uiMaxFileSizeLimit)) {
 			cdlog_create_new_file(cdlog);
 		}
 		cdlog->file.number = 0;
 	}
-#endif
 }
 
 PRIVATE void io_writer(os_cdlog_t *cdlog, os_cdlog_level_e level, const char *string)
@@ -710,36 +706,28 @@ PRIVATE void cdlog_cycle(int sig)
 PRIVATE void cdlog_catch_segViolation(int sig)
 {
 #if HAVE_BACKTRACE
-	int i, nStrLen, nDepth;
+	int i, nDepth;
 
 	void 	*stackTraceBuf[CLOG_MAX_STACK_DEPTH];
 	const char* sFileNames[CLOG_MAX_STACK_DEPTH];
 	const char* sFunctions[CLOG_MAX_STACK_DEPTH];
 
 	char **strings; 
-    char buf[CLOG_MAX_STACK_DEPTH*128] = {0};
 
 	nDepth = backtrace(stackTraceBuf, OS_ARRAY_SIZE(stackTraceBuf));
 
 	strings = backtrace_symbols(stackTraceBuf, nDepth);
+	cdlog_show(FATAL, CLOG_SEGFAULT_STR);
 
 	if(strings){
-		for(i = 0, nStrLen=0; i < nDepth; i++)
+		for(i = 0; i < nDepth; i++)
 		{
 			sFunctions[i] = (strings[i]);
 			sFileNames[i] = "unknown file";
 
-			//printf("BT[%d] : len [%ld]: %s\n",i, strlen(sFunctions[i]),strings[i]);
-			sprintf(buf+nStrLen, "	 in Function %s (from %s)\n", sFunctions[i], sFileNames[i]);
-			nStrLen += strlen(sFunctions[i]) + strlen(sFileNames[i]) + 15;
+			cdlog_show(FATAL, "BT[%d] : in Function %s (from %s)",i, sFunctions[i], sFileNames[i]);
 		}
 
-		os_cdlog_t *log = NULL;
-
-	    os_list_for_each(&cdlog_list, log) {
-			cdlog_print(FATAL, "Segmentation Fault Occurred\n%s\n", buf);
-			fflush(log->file.out);
-	    }
 		free(strings);
 	}
 #endif
