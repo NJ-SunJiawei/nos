@@ -159,6 +159,7 @@ PRIVATE void cmlog_catch_segViolation(int sig)
 	cmlog_flush_data(SIGSEGV);
 }
 
+#if defined(CMLOG_ALLOW_CLOCK_TIME)
 PRIVATE void cmlog_timestamp(char* ts)
 {
     struct timeval tv;
@@ -169,6 +170,7 @@ PRIVATE void cmlog_timestamp(char* ts)
 
    	sprintf(ts,"%04d/%02d/%02d %02d:%02d:%02d.%03d", tm.tm_year+1900, tm.tm_mon+1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec, (int)(tv.tv_usec/1000));
 }
+#endif
 
 PRIVATE void cmlog_timestamp_name(char* ts)
 {
