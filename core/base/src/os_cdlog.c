@@ -36,8 +36,8 @@ typedef struct cdlog_s {
     union {
         struct {
             FILE *out;
-			int number;
-			int idx;
+            int number;
+            int idx;
         } file;
     };
 
@@ -187,7 +187,7 @@ _API_ void os_cdlog_install_domain(int *domain_id, const char *name, os_cdlog_le
     if (domain) {
         os_log(WARN, "`%s` log-domain duplicated", name);
         if (level != domain->level) {
-	        os_log(WARN, "[%s]->[%s] log-level changed", g_logStr[domain->level], g_logStr[level]);
+            os_log(WARN, "[%s]->[%s] log-level changed", g_logStr[domain->level], g_logStr[level]);
             os_cdlog_set_domain_level(domain->id, level);
         }
     } else {
@@ -264,9 +264,9 @@ _API_ int os_cdlog_config_domain(const char *domain_mask, const char *level)
 
 _API_ void os_cdlog_init(void)
 {
-	signal(SIGSEGV, cdlog_catch_segViolation);
-	signal(SIGBUS,  cdlog_catch_segViolation);
-	signal(SIGINT,  cdlog_cycle);
+    signal(SIGSEGV, cdlog_catch_segViolation);
+    signal(SIGBUS,  cdlog_catch_segViolation);
+    signal(SIGINT,  cdlog_cycle);
 
     os_pool_init(&cdlog_pool, os_global_context()->log.pool);
 
@@ -314,8 +314,8 @@ os_cdlog_t *os_cdlog_add_file(void)
     
     cdlog = add_cdlog(OS_LOG_FILE_TYPE);
     os_assert(cdlog);
-	
-	cdlog_create_new_file(cdlog);
+    
+    cdlog_create_new_file(cdlog);
 
     cdlog->writer = file_writer;
 
@@ -324,26 +324,26 @@ os_cdlog_t *os_cdlog_add_file(void)
 
 void os_cdlog_set_file_size(unsigned int max_limit_size)
 {
-	g_uiMaxFileSizeLimit = (max_limit_size == 0) ? MAX_FILE_SIZE : max_limit_size*1048576;
+    g_uiMaxFileSizeLimit = (max_limit_size == 0) ? MAX_FILE_SIZE : max_limit_size*1048576;
 }
 
 void os_cdlog_set_file_num(unsigned char max_file_num)
 {
-	if( max_file_num > CLOG_MAX_FILES || max_file_num == 0 ) {
-		g_nMaxLogFiles = CLOG_MAX_FILES;
-		return;
-	}
-	g_nMaxLogFiles = max_file_num;
+    if( max_file_num > CLOG_MAX_FILES || max_file_num == 0 ) {
+        g_nMaxLogFiles = CLOG_MAX_FILES;
+        return;
+    }
+    g_nMaxLogFiles = max_file_num;
 }
 
 void os_cdlog_set_log_path(const char* log_dir)
 {
-	strncpy(g_logDir, log_dir, MAX_FILENAME_LEN);
+    strncpy(g_logDir, log_dir, MAX_FILENAME_LEN);
 }
 
 void os_cdlog_set_file_name(const char* file_name)
 {
-	strncpy(g_fileName, file_name, MAX_FILENAME_LEN);
+    strncpy(g_fileName, file_name, MAX_FILENAME_LEN);
 }
 
 PRIVATE void cdlog_file_timestamp(char* ts)
@@ -354,7 +354,7 @@ PRIVATE void cdlog_file_timestamp(char* ts)
     os_gettimeofday(&tv);
     os_localtime(tv.tv_sec, &tm);
 
-   	sprintf(ts,"%04d%02d%02d_%02d:%02d:%02d.%03d", tm.tm_year+1900, tm.tm_mon+1, tm.tm_mday, tm.tm_hour, tm.tm_min,tm.tm_sec, (int)(tv.tv_usec/1000));
+       sprintf(ts,"%04d%02d%02d_%02d:%02d:%02d.%03d", tm.tm_year+1900, tm.tm_mon+1, tm.tm_mday, tm.tm_hour, tm.tm_min,tm.tm_sec, (int)(tv.tv_usec/1000));
 }
 
 
@@ -393,7 +393,7 @@ PRIVATE void cdlog_create_new_file(os_cdlog_t *cdlog)
 
    if( fp == NULL ) {
       fprintf(stderr, "Failed to open log file %s\n", g_fileList[cdlog->file.idx]);
-	  perror("Error opening file");
+      perror("Error opening file");
       return;
    }
 
@@ -478,7 +478,7 @@ void cdlog_vprintf(os_cdlog_level_e level, int id, os_err_t err, const char *fil
             if (cdlog->print.linefeed) 
                 p = cdlog_linefeed(p, last);
         }
-		
+        
         cdlog->writer(cdlog, level, cdlogstr);
         
         if (cdlog->type == OS_LOG_STDERR_TYPE)
@@ -654,12 +654,12 @@ PRIVATE void file_writer(os_cdlog_t *cdlog, os_cdlog_level_e level, const char *
     fprintf(cdlog->file.out, "%s", string);
     fflush(cdlog->file.out);//???
 
-	if(++cdlog->file.number == CLOG_LIMIT_COUNT/2){
-		if(cdlog->file.out && ((unsigned int)(ftell(cdlog->file.out)) > g_uiMaxFileSizeLimit)) {
-			cdlog_create_new_file(cdlog);
-		}
-		cdlog->file.number = 0;
-	}
+    if(++cdlog->file.number == CLOG_LIMIT_COUNT/2){
+        if(cdlog->file.out && ((unsigned int)(ftell(cdlog->file.out)) > g_uiMaxFileSizeLimit)) {
+            cdlog_create_new_file(cdlog);
+        }
+        cdlog->file.number = 0;
+    }
 }
 
 PRIVATE void io_writer(os_cdlog_t *cdlog, os_cdlog_level_e level, const char *string)
@@ -692,45 +692,45 @@ PRIVATE void cdlog_cycle(int sig)
         }
     }
 
-	if(SIGSEGV == sig)
-	{
-	   signal(sig, SIG_DFL);
-	   kill(getpid(), sig);
-	}
-	else
-	{
-	   exit(0);
-	}
+    if(SIGSEGV == sig)
+    {
+       signal(sig, SIG_DFL);
+       kill(getpid(), sig);
+    }
+    else
+    {
+       exit(0);
+    }
 }
 
 PRIVATE void cdlog_catch_segViolation(int sig)
 {
 #if HAVE_BACKTRACE
-	int i, nDepth;
+    int i, nDepth;
 
-	void 	*stackTraceBuf[CLOG_MAX_STACK_DEPTH];
-	const char* sFileNames[CLOG_MAX_STACK_DEPTH];
-	const char* sFunctions[CLOG_MAX_STACK_DEPTH];
+    void     *stackTraceBuf[CLOG_MAX_STACK_DEPTH];
+    const char* sFileNames[CLOG_MAX_STACK_DEPTH];
+    const char* sFunctions[CLOG_MAX_STACK_DEPTH];
 
-	char **strings; 
+    char **strings; 
 
-	nDepth = backtrace(stackTraceBuf, OS_ARRAY_SIZE(stackTraceBuf));
+    nDepth = backtrace(stackTraceBuf, OS_ARRAY_SIZE(stackTraceBuf));
 
-	strings = backtrace_symbols(stackTraceBuf, nDepth);
-	cdlog_show(FATAL, CLOG_SEGFAULT_STR);
+    strings = backtrace_symbols(stackTraceBuf, nDepth);
+    cdlog_show(FATAL, CLOG_SEGFAULT_STR);
 
-	if(strings){
-		for(i = 0; i < nDepth; i++)
-		{
-			sFunctions[i] = (strings[i]);
-			sFileNames[i] = "unknown file";
+    if(strings){
+        for(i = 0; i < nDepth; i++)
+        {
+            sFunctions[i] = (strings[i]);
+            sFileNames[i] = "unknown file";
 
-			cdlog_show(FATAL, "BT[%d] : in Function %s (from %s)",i, sFunctions[i], sFileNames[i]);
-		}
+            cdlog_show(FATAL, "BT[%d] : in Function %s (from %s)",i, sFunctions[i], sFileNames[i]);
+        }
 
-		free(strings);
-	}
+        free(strings);
+    }
 #endif
-	cdlog_cycle(SIGSEGV);
+    cdlog_cycle(SIGSEGV);
 }
 

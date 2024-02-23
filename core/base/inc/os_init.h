@@ -94,5 +94,5 @@ _EXIT_API_ void os_core_callback(void (*termFunc)(void));
 #ifdef __cplusplus
 }
 #endif
-	
+    
 #endif

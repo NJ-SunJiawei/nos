@@ -10,70 +10,70 @@ void test_1(void)
     int64_t log_out, printf_out;
 
     gettimeofday(&tv, NULL);
-	time_start = tv.tv_sec*1000000LL + tv.tv_usec;
+    time_start = tv.tv_sec*1000000LL + tv.tv_usec;
 
-	for(int i = 0; i < LOG_TEST_NUM; ++i){
-		os_log(ERROR, "ttttttttttttttttttttttttttttttttttttt%d", i);
-	}
+    for(int i = 0; i < LOG_TEST_NUM; ++i){
+        os_log(ERROR, "ttttttttttttttttttttttttttttttttttttt%d", i);
+    }
     gettimeofday(&tv, NULL);
-	time_stop = tv.tv_sec*1000000LL + tv.tv_usec;
-	log_out = time_stop - time_start;
+    time_stop = tv.tv_sec*1000000LL + tv.tv_usec;
+    log_out = time_stop - time_start;
 
-	usleep(2000);
+    usleep(2000);
 
     gettimeofday(&tv, NULL);
-	time_start = tv.tv_sec*1000000LL + tv.tv_usec;
-	for(int i = 0; i < LOG_TEST_NUM; ++i){
-		fprintf(stderr, "[0][os]main_test.c:test_2:39 ERROR:ttttttttttttttttttttttttttttttttttttt%d\n", i);
-	}
+    time_start = tv.tv_sec*1000000LL + tv.tv_usec;
+    for(int i = 0; i < LOG_TEST_NUM; ++i){
+        fprintf(stderr, "[0][os]main_test.c:test_2:39 ERROR:ttttttttttttttttttttttttttttttttttttt%d\n", i);
+    }
     gettimeofday(&tv, NULL);
-	time_stop = tv.tv_sec*1000000LL + tv.tv_usec;
-	printf_out = time_stop - time_start;
+    time_stop = tv.tv_sec*1000000LL + tv.tv_usec;
+    printf_out = time_stop - time_start;
 
-	os_logsp(ERROR, ERRNOID, 222, "getsockopt(SCTP_PEER_ADDR_PARAMS) failed [%d]", 111);
+    os_logsp(ERROR, ERRNOID, 222, "getsockopt(SCTP_PEER_ADDR_PARAMS) failed [%d]", 111);
 
-	uint8_t k[128] = "\x46\x5B\x5C\xE8\xB1\x99\xB4\x9F\xAA\x5F\x0A\x2E\xE2\x38\x88\xBC\x46\x40\x5C\xE8\xB1\x99\x67\x9F\xAA\x5F\x09\x2E\xE2\x34\xA6\xBC";
+    uint8_t k[128] = "\x46\x5B\x5C\xE8\xB1\x99\xB4\x9F\xAA\x5F\x0A\x2E\xE2\x38\x88\xBC\x46\x40\x5C\xE8\xB1\x99\x67\x9F\xAA\x5F\x09\x2E\xE2\x34\xA6\xBC";
     os_logh(TRACE, "test num:\n%s" ,k, sizeof(k));
 
-	printf("mlog_out = %ldus, printf_out = %ldus\n", (log_out)/LOG_TEST_NUM , (printf_out)/LOG_TEST_NUM);
+    printf("mlog_out = %ldus, printf_out = %ldus\n", (log_out)/LOG_TEST_NUM , (printf_out)/LOG_TEST_NUM);
 
 }
 
 void test_2(void)
 {
-	char *buf = NULL;
-	os_assert(buf);
+    char *buf = NULL;
+    os_assert(buf);
 }
 
 void test_3(void)
 {
-	char *buf1 = NULL;
-	char buf2[10] = {0};
-	memcpy(buf1, buf2, 10);
+    char *buf1 = NULL;
+    char buf2[10] = {0};
+    memcpy(buf1, buf2, 10);
 }
 
 void term(void)
 {
     os_buf_default_destroy();
-	os_core_terminate();
+    os_core_terminate();
 }
 
 int main(void){
     os_buf_config_t config;
 
-	os_cmlog_set_filenum(2);
-	os_cmlog_set_log_path("/home/test");
-	os_core_initialize();
-	os_core_callback(term);
+    os_cmlog_set_filenum(2);
+    os_cmlog_set_log_path("/home/test");
+    os_core_initialize();
+    os_core_callback(term);
 
     os_buf_default_init(&config);
     os_buf_default_create(&config);
 
-	test_1();
-	//test_2();
-	test_3();
+    test_1();
+    //test_2();
+    test_3();
 
-	printf("daemon running...\n");
-	while(1);
-	return -1;
+    printf("daemon running...\n");
+    while(1);
+    return -1;
 }

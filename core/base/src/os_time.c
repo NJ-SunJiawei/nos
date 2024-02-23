@@ -58,18 +58,18 @@ int os_gettimeofday(struct timeval *tv)
 #else
 #define DELTA_EPOCH_IN_MICROSEC 11644473600000000ULL
 #endif
-	FILETIME ft;
-	uint64_t tmp = 0;
+    FILETIME ft;
+    uint64_t tmp = 0;
 
-	/*
-	 * The const value is shamelessy stolen from
-	 * http://www.boost.org/doc/libs/1_55_0/boost/chrono/detail/inlined/win/chrono.hpp
-	 *
-	 * File times are the number of 100 nanosecond intervals elapsed since
-	 * 12:00 am Jan 1, 1601 UTC.  I haven't check the math particularly hard
-	 *
-	 * ...  good luck
-	 */
+    /*
+     * The const value is shamelessy stolen from
+     * http://www.boost.org/doc/libs/1_55_0/boost/chrono/detail/inlined/win/chrono.hpp
+     *
+     * File times are the number of 100 nanosecond intervals elapsed since
+     * 12:00 am Jan 1, 1601 UTC.  I haven't check the math particularly hard
+     *
+     * ...  good luck
+     */
 
     if (tv) {
         GetSystemTimeAsFileTime (&ft);
@@ -105,7 +105,7 @@ os_time_t os_time_now(void)
     rc = os_gettimeofday(&tv);
     os_assert(rc == 0);
 
-    return 	os_time_from_sec(tv.tv_sec) + tv.tv_usec;
+    return     os_time_from_sec(tv.tv_sec) + tv.tv_usec;
 }
 
 /* The following code is stolen from APR library */

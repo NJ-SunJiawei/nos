@@ -125,12 +125,12 @@ int os_addaddrinfo(os_sockaddr_t **sa_list,
         if (hostname) {
             if (os_inet_pton(ai->ai_family, hostname, &tmp) == OS_OK) {
                 /* It's a valid IP address */
-				os_log(DEBUG, "addr:%s, port:%d", OS_ADDR(new, buf), port);
+                os_log(DEBUG, "addr:%s, port:%d", OS_ADDR(new, buf), port);
             } else {
                 /* INVALID IP address! We assume it is a hostname */
                 new->hostname = os_strdup(hostname);
                 os_assert(new->hostname);
-				os_log(DEBUG, "name:%s, port:%d", new->hostname, port);
+                os_log(DEBUG, "name:%s, port:%d", new->hostname, port);
             }
         }
 
@@ -146,7 +146,7 @@ int os_addaddrinfo(os_sockaddr_t **sa_list,
 
     if (prev == NULL) {
         os_logsp(ERROR, ERRNOID, os_socket_errno, "os_getaddrinfo(%d:%s:%d:%d) failed", family, hostname, port, flags);
-		return OS_ERROR;
+        return OS_ERROR;
     }
 
     return OS_OK;
@@ -591,7 +591,7 @@ int os_ipsubnet(os_ipsubnet_t *ipsub,
 
     rv = parse_ip(ipsub, ipstr, mask_or_numbits == NULL);
     if (rv != OS_OK) {
-		os_log(ERROR, "parse_ip(%s, %s) failed", ipstr, mask_or_numbits);
+        os_log(ERROR, "parse_ip(%s, %s) failed", ipstr, mask_or_numbits);
         return rv;
     }
 

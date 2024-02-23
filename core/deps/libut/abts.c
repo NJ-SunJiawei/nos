@@ -265,10 +265,10 @@ static int report(abts_suite *suite)
     }
 
     if (failed_count == 0) {
-		fprintf(stdout, "%-15s\t\tTotal\tResult\n", "UT Report");
-		fprintf(stdout, "===================================================\n");
-		fprintf(stdout, "%-15s\t\t%5d\t%s\n", "UT Lists", 
-				all_count, "All Pass");
+        fprintf(stdout, "%-15s\t\tTotal\tResult\n", "UT Report");
+        fprintf(stdout, "===================================================\n");
+        fprintf(stdout, "%-15s\t\t%5d\t%s\n", "UT Lists", 
+                all_count, "All Pass");
 
         return 0;
     }

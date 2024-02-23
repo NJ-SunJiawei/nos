@@ -71,7 +71,7 @@ int os_notify_pollset(os_pollset_t *pollset)
 #endif
 
     if (r < 0) {
-       	os_logsp(ERROR, ERRNOID, os_socket_errno, "notify failed");
+           os_logsp(ERROR, ERRNOID, os_socket_errno, "notify failed");
         return OS_ERROR;
     }
 

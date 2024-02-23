@@ -43,54 +43,54 @@ typedef unsigned char cmlog_buffer_t[CLOG_FIXED_LENGTH_BUFFER_SIZE];
 PRIVATE void cmlog_create_new_log_file(void);
 PRIVATE void cmlog_read_cirbuf(cmlog_buffer_t pkt , unsigned int len);
 
-PRIVATE int	g_nWrites = 0;  /* number of times log function is called */
+PRIVATE int    g_nWrites = 0;  /* number of times log function is called */
 
 #define CHECK_CIRFILE_SIZE if(++g_nWrites == CLOG_LIMIT_COUNT/2)    \
-	{ \
-		if(g_fp && ftell(g_fp) > g_uiMaxFileSizeLimit) \
-		{ \
-			cmlog_create_new_log_file(); \
-		} \
-	}
+    { \
+        if(g_fp && ftell(g_fp) > g_uiMaxFileSizeLimit) \
+        { \
+            cmlog_create_new_log_file(); \
+        } \
+    }
 
 PRIVATE void cmlog_deregister_res(void)
 {
-	os_ring_buf_destroy(log_buf);
-	os_ring_queue_destroy(log_queue);
+    os_ring_buf_destroy(log_buf);
+    os_ring_queue_destroy(log_queue);
 }
 
 PRIVATE void cmlog_register_res(void)
 {
-	log_queue = os_ring_queue_create(g_cirBufferDepth);
-	log_buf = os_ring_buf_create(g_cirBufferDepth, sizeof(cmlog_buffer_t));
-	if(NULL == log_buf)
-	{
-		os_ring_queue_destroy(log_queue);
-		return;	
-	}
-	g_readyFg = 1;
+    log_queue = os_ring_queue_create(g_cirBufferDepth);
+    log_buf = os_ring_buf_create(g_cirBufferDepth, sizeof(cmlog_buffer_t));
+    if(NULL == log_buf)
+    {
+        os_ring_queue_destroy(log_queue);
+        return;    
+    }
+    g_readyFg = 1;
 }
 
 PRIVATE void cmlog_read_cirbuf(cmlog_buffer_t pkt , unsigned int len)
 {
-	if(NULL == pkt || 0 == len){
-		return;
-	}
+    if(NULL == pkt || 0 == len){
+        return;
+    }
 
-	fprintf(g_fp, "%s", pkt);
+    fprintf(g_fp, "%s", pkt);
 
-	CHECK_CIRFILE_SIZE
+    CHECK_CIRFILE_SIZE
 }
 
 PRIVATE void cmlog_read_final(void)
 {
-	unsigned char *pkt = NULL;
-	unsigned int len = 0;
+    unsigned char *pkt = NULL;
+    unsigned int len = 0;
 
-	//no block
-	while ((os_ring_queue_try_get(log_queue, &pkt, &len) == OS_OK) && pkt && len) {
-		cmlog_read_cirbuf(pkt, len);
-	}
+    //no block
+    while ((os_ring_queue_try_get(log_queue, &pkt, &len) == OS_OK) && pkt && len) {
+        cmlog_read_cirbuf(pkt, len);
+    }
 
 }
 
@@ -102,61 +102,61 @@ PRIVATE void cmlog_read_final(void)
     x = 0x0001;
     c = *(unsigned char *)(&x);
 
-	return ( c == 0x01 ) ? little_endian : big_endian;
+    return ( c == 0x01 ) ? little_endian : big_endian;
 }*/
 
 PRIVATE void cmlog_flush_data(int sig)
 {
-	g_readyFg = 0;
-	g_clogWriteCount = 0;
-	//os_ring_queue_term(log_queue); //all no block,no need term
+    g_readyFg = 0;
+    g_clogWriteCount = 0;
+    //os_ring_queue_term(log_queue); //all no block,no need term
 
-	cmlog_read_final();
-	fflush(g_fp);
+    cmlog_read_final();
+    fflush(g_fp);
 
-	if(SIGSEGV == sig)
-	{
-	   signal(sig, SIG_DFL);
-	   kill(getpid(), sig);
-	}
-	else
-	{
-	   fprintf(stderr, "cmlog SIG[%d] exit\n", sig);
-	   exit(0);
-	}
+    if(SIGSEGV == sig)
+    {
+       signal(sig, SIG_DFL);
+       kill(getpid(), sig);
+    }
+    else
+    {
+       fprintf(stderr, "cmlog SIG[%d] exit\n", sig);
+       exit(0);
+    }
 
-	return;
+    return;
 }
 
 //libunwind
 PRIVATE void cmlog_catch_segViolation(int sig)
 {
 #if HAVE_BACKTRACE
-	int i, nDepth;
+    int i, nDepth;
 
-	void 	*stackTraceBuf[CLOG_MAX_STACK_DEPTH];
-	const char* sFileNames[CLOG_MAX_STACK_DEPTH];
-	const char* sFunctions[CLOG_MAX_STACK_DEPTH];
+    void     *stackTraceBuf[CLOG_MAX_STACK_DEPTH];
+    const char* sFileNames[CLOG_MAX_STACK_DEPTH];
+    const char* sFunctions[CLOG_MAX_STACK_DEPTH];
 
-	char **strings; 
+    char **strings; 
 
-	nDepth = backtrace(stackTraceBuf, CLOG_MAX_STACK_DEPTH);
+    nDepth = backtrace(stackTraceBuf, CLOG_MAX_STACK_DEPTH);
 
-	strings = (char**) backtrace_symbols(stackTraceBuf, nDepth);
-	CMLOGX(FATAL, CLOG_SEGFAULT_STR);
+    strings = (char**) backtrace_symbols(stackTraceBuf, nDepth);
+    CMLOGX(FATAL, CLOG_SEGFAULT_STR);
 
-	if(strings){
-		for(i = 0; i < nDepth; i++)
-		{
-			sFunctions[i] = (strings[i]);
-			sFileNames[i] = "unknown file";
+    if(strings){
+        for(i = 0; i < nDepth; i++)
+        {
+            sFunctions[i] = (strings[i]);
+            sFileNames[i] = "unknown file";
 
-			CMPRINT(FATAL, "BT[%d] : in Function %s (from %s)",i, sFunctions[i], sFileNames[i]);
-		}
-		free(strings);
-	}
+            CMPRINT(FATAL, "BT[%d] : in Function %s (from %s)",i, sFunctions[i], sFileNames[i]);
+        }
+        free(strings);
+    }
 #endif
-	cmlog_flush_data(SIGSEGV);
+    cmlog_flush_data(SIGSEGV);
 }
 
 #if defined(CMLOG_ALLOW_CLOCK_TIME)
@@ -168,7 +168,7 @@ PRIVATE void cmlog_timestamp(char* ts)
     os_gettimeofday(&tv);
     os_localtime(tv.tv_sec, &tm);
 
-   	sprintf(ts,"%04d/%02d/%02d %02d:%02d:%02d.%03d", tm.tm_year+1900, tm.tm_mon+1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec, (int)(tv.tv_usec/1000));
+       sprintf(ts,"%04d/%02d/%02d %02d:%02d:%02d.%03d", tm.tm_year+1900, tm.tm_mon+1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec, (int)(tv.tv_usec/1000));
 }
 #endif
 
@@ -180,15 +180,15 @@ PRIVATE void cmlog_timestamp_name(char* ts)
     os_gettimeofday(&tv);
     os_localtime(tv.tv_sec, &tm);
 
-   	sprintf(ts,"%04d%02d%02d_%02d:%02d:%02d.%03d", tm.tm_year+1900, tm.tm_mon+1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec, (int)(tv.tv_usec/1000));
+       sprintf(ts,"%04d%02d%02d_%02d:%02d:%02d.%03d", tm.tm_year+1900, tm.tm_mon+1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec, (int)(tv.tv_usec/1000));
 }
 
 
 #ifdef CMLOG_ALLOW_CONSOLE_LOGS
 PRIVATE void cmlog_add_stderr(void)
 {
-	os_cmlog_set_filename("stderr");
-	g_fp = stderr;
+    os_cmlog_set_filename("stderr");
+    g_fp = stderr;
     return;
 }
 #endif
@@ -223,8 +223,8 @@ PRIVATE void cmlog_create_new_log_file(void)
 
    /* remove old file from system */
    if( g_fileList[g_nCurrFileIdx][0] != '\0' ){
-	   unlink(g_fileList[g_nCurrFileIdx]);
-	   //fprintf(stderr, "remove log file success%s\n", g_fileList[g_nCurrFileIdx]);
+       unlink(g_fileList[g_nCurrFileIdx]);
+       //fprintf(stderr, "remove log file success%s\n", g_fileList[g_nCurrFileIdx]);
    }
 
    sprintf(g_fileList[g_nCurrFileIdx], "%s/%s_%s.log",g_logDir, g_fileName, curTime);
@@ -232,7 +232,7 @@ PRIVATE void cmlog_create_new_log_file(void)
 
    if( fp == NULL ) {
       fprintf(stderr, "Failed to open log file %s\n", g_fileList[g_nCurrFileIdx]);
-	  perror("Error opening file");
+      perror("Error opening file");
       return;
    }
 
@@ -260,153 +260,153 @@ PRIVATE void cmlog_create_new_log_file(void)
 
 PRIVATE void cmlog_printf_static(void)
 {
-	fprintf(g_fp, "Log drop count:\t\t[%d]\n", g_logsDropCnt);
-	fprintf(g_fp, "Log lost count:\t\t[%d]\n", g_logsLostCnt);
-	//os_ring_queue_show(log_queue);
-	//os_ring_buf_show(log_buf);
+    fprintf(g_fp, "Log drop count:\t\t[%d]\n", g_logsDropCnt);
+    fprintf(g_fp, "Log lost count:\t\t[%d]\n", g_logsLostCnt);
+    //os_ring_queue_show(log_queue);
+    //os_ring_buf_show(log_buf);
 }
 
 /*/var/lib/apport/coredump*/
 PRIVATE void cmlog_enable_coredump(bool enable_core)
 {
 #ifdef HAVE_SETRLIMIT
-	struct rlimit core_limits;
-	core_limits.rlim_cur = core_limits.rlim_max = enable_core ? RLIM_INFINITY : 0;
-	setrlimit(RLIMIT_CORE, &core_limits);
+    struct rlimit core_limits;
+    core_limits.rlim_cur = core_limits.rlim_max = enable_core ? RLIM_INFINITY : 0;
+    setrlimit(RLIMIT_CORE, &core_limits);
 #endif
 }
 
 PRIVATE void* cmlog_cirbuf_read_thread(void* arg)
 {
-	unsigned char *pkt = NULL;
-	unsigned int len = 0;
+    unsigned char *pkt = NULL;
+    unsigned int len = 0;
     int rv = OS_ERROR;
 
-	//fprintf(stderr, "Circular Buffer Reader thread started\n");
+    //fprintf(stderr, "Circular Buffer Reader thread started\n");
 
-	while(g_readyFg)
-	{
-		//no block
-		rv = os_ring_queue_try_get(log_queue, &pkt, &len);
-		if(rv != OS_OK)
-		{
-	       if (rv == OS_DONE)
-		   	   break;
+    while(g_readyFg)
+    {
+        //no block
+        rv = os_ring_queue_try_get(log_queue, &pkt, &len);
+        if(rv != OS_OK)
+        {
+           if (rv == OS_DONE)
+                  break;
 
-		   if (rv == OS_RETRY){
-			   continue;
-		   }
-		}
-		cmlog_read_cirbuf(pkt, len);
-		os_ring_buf_ret(pkt);
-		pkt = NULL;
-		len = 0;
-	}
+           if (rv == OS_RETRY){
+               continue;
+           }
+        }
+        cmlog_read_cirbuf(pkt, len);
+        os_ring_buf_ret(pkt);
+        pkt = NULL;
+        len = 0;
+    }
 
-	return NULL;
+    return NULL;
 }
 
 void os_cmlog_set_filesize_limit(unsigned int maxFileSize)
 {
-	g_uiMaxFileSizeLimit = (maxFileSize == 0) ? MAX_FILE_SIZE : maxFileSize*1048576;
+    g_uiMaxFileSizeLimit = (maxFileSize == 0) ? MAX_FILE_SIZE : maxFileSize*1048576;
 }
 
 void os_cmlog_set_filenum(unsigned char maxFiles)
 {
-	if( maxFiles > CLOG_MAX_FILES || maxFiles == 0 ) {
-		g_nMaxLogFiles = CLOG_MAX_FILES;
-		return;
-	}
-	g_nMaxLogFiles = maxFiles;
+    if( maxFiles > CLOG_MAX_FILES || maxFiles == 0 ) {
+        g_nMaxLogFiles = CLOG_MAX_FILES;
+        return;
+    }
+    g_nMaxLogFiles = maxFiles;
 }
 
 void os_cmlog_set_log_path(const char* logDir)
 {
-	strncpy(g_logDir, logDir, MAX_FILENAME_LEN);
+    strncpy(g_logDir, logDir, MAX_FILENAME_LEN);
 }
 
 void os_cmlog_set_cirbuf_depth(unsigned int depth)
 {
-	g_cirBufferDepth = depth;
+    g_cirBufferDepth = depth;
 }
 
 void os_cmlog_printf_config(void)
 {
-	fprintf(stderr, "Log File:\t\t[%s]\n", g_fileName);
-	fprintf(stderr, "Log level[%d]:\t\t[%s]\n",g_logLevel, g_logStr[g_logLevel]);
-	fprintf(stderr, "File Size Limit:\t[%d KB]\n", g_uiMaxFileSizeLimit/1024);
-	fprintf(stderr, "Maximum Log Files:\t[%d]\n", g_nMaxLogFiles);
+    fprintf(stderr, "Log File:\t\t[%s]\n", g_fileName);
+    fprintf(stderr, "Log level[%d]:\t\t[%s]\n",g_logLevel, g_logStr[g_logLevel]);
+    fprintf(stderr, "File Size Limit:\t[%d KB]\n", g_uiMaxFileSizeLimit/1024);
+    fprintf(stderr, "Maximum Log Files:\t[%d]\n", g_nMaxLogFiles);
 
-	fprintf(stderr, "Memory Logging:\t\t[Enabled]\n");
-	fprintf(stderr, "Circular BufferSize:\t[Actual:%d KB]\n", g_cirBufferDepth * CLOG_FIXED_LENGTH_BUFFER_SIZE/1024);
+    fprintf(stderr, "Memory Logging:\t\t[Enabled]\n");
+    fprintf(stderr, "Circular BufferSize:\t[Actual:%d KB]\n", g_cirBufferDepth * CLOG_FIXED_LENGTH_BUFFER_SIZE/1024);
 }
 
 void os_cmlog_set_filename(const char* fileName)
 {
-	strncpy(g_fileName, fileName, MAX_FILENAME_LEN);
+    strncpy(g_fileName, fileName, MAX_FILENAME_LEN);
 }
 
 void os_cmlog_set_log_level(os_clog_level_e logLevel)
 {
-	g_logLevel = logLevel;
+    g_logLevel = logLevel;
 }
 
 void os_cmlog_set_module_mask(unsigned int modMask)
 {
-	g_modMask =  (modMask == 0 ) ? 0 : (g_modMask ^ modMask);
+    g_modMask =  (modMask == 0 ) ? 0 : (g_modMask ^ modMask);
 }
 
 void os_cmlog_init(void)
 {
-	os_thread_id_t tid;
+    os_thread_id_t tid;
 
-	signal(SIGSEGV, cmlog_catch_segViolation);
-	signal(SIGBUS,  cmlog_catch_segViolation);
-	signal(SIGINT,  cmlog_flush_data);
-	signal(SIGHUP,  cmlog_flush_data);
+    signal(SIGSEGV, cmlog_catch_segViolation);
+    signal(SIGBUS,  cmlog_catch_segViolation);
+    signal(SIGINT,  cmlog_flush_data);
+    signal(SIGHUP,  cmlog_flush_data);
 
-	cmlog_enable_coredump(true);
+    cmlog_enable_coredump(true);
 
-	g_maxClogCount = CLOG_LIMIT_COUNT;
+    g_maxClogCount = CLOG_LIMIT_COUNT;
 
-	cmlog_register_res();
+    cmlog_register_res();
 
-	if(!g_readyFg){
-		fprintf(stderr, "Failed to initialize log resource\n");
-		exit(0);
-	}
+    if(!g_readyFg){
+        fprintf(stderr, "Failed to initialize log resource\n");
+        exit(0);
+    }
 
 #ifdef CMLOG_ALLOW_CONSOLE_LOGS
-	cmlog_add_stderr();
+    cmlog_add_stderr();
 #else
-	cmlog_create_new_log_file();
+    cmlog_create_new_log_file();
 #endif
 
-	if(pthread_create(&tid, NULL, cmlog_cirbuf_read_thread, NULL) != 0) {
-		fprintf(g_fp, "Failed to initialize log server thread\n");
-		exit(0);
-	}
+    if(pthread_create(&tid, NULL, cmlog_cirbuf_read_thread, NULL) != 0) {
+        fprintf(g_fp, "Failed to initialize log server thread\n");
+        exit(0);
+    }
 
-	os_cmlog_printf_config();
+    os_cmlog_printf_config();
 
 }
 
 
 void os_cmlog_final(void)
 {
-	g_readyFg = 0;
-	g_clogWriteCount = 0;
+    g_readyFg = 0;
+    g_clogWriteCount = 0;
 
-	cmlog_read_final();
+    cmlog_read_final();
 
-	cmlog_printf_static();
+    cmlog_printf_static();
 
-	fflush(g_fp);
-	if(g_fp != stderr){
-		fclose(g_fp);
-	}
+    fflush(g_fp);
+    if(g_fp != stderr){
+        fclose(g_fp);
+    }
 
-	cmlog_deregister_res();
+    cmlog_deregister_res();
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -468,17 +468,17 @@ PRIVATE void cmlog_save_log_data(const void* buf, unsigned int len)
       return;
    }
 
-	if (OS_OK != os_ring_queue_try_put(log_queue, (unsigned char *)buf, len)) {
-		//g_logsLostCnt++;
-		os_ring_buf_ret((unsigned char *)buf);
-	}	 
+    if (OS_OK != os_ring_queue_try_put(log_queue, (unsigned char *)buf, len)) {
+        //g_logsLostCnt++;
+        os_ring_buf_ret((unsigned char *)buf);
+    }     
 }
 
 #if 0
 PRIVATE void cmlog_hex_to_asii(char* out, const unsigned char* h, int hexlen)
 {
    for(int i = 0; i < hexlen; i++, out+=3, h++){
-	   sprintf(out, "%02x ", *h);
+       sprintf(out, "%02x ", *h);
    }
 }
 #else
@@ -515,46 +515,46 @@ PRIVATE void cmlog_hex_to_asii(char* out, const unsigned char* h, int hexlen)
 
 void cmlogN(int content_only, int logLevel, const char* modName, char* file, const char* func, int line, const char* fmtStr, ...)
 {
-	va_list argList;
-	void *szLog = NULL;
+    va_list argList;
+    void *szLog = NULL;
 
-	szLog = (void *)os_ring_buf_get(log_buf);
-	if(NULL == szLog) {
-		g_logsLostCnt++;
-		return;
-	}
-	if(!content_only){
+    szLog = (void *)os_ring_buf_get(log_buf);
+    if(NULL == szLog) {
+        g_logsLostCnt++;
+        return;
+    }
+    if(!content_only){
 #ifdef CMLOG_ALLOW_CLOCK_TIME
-		char szTime[CLOG_MAX_TIME_STAMP] = {0};
-		cmlog_timestamp(szTime);
-		snprintf(szLog, CLOG_FIXED_LENGTH_BUFFER_SIZE, "[%s] [%s] %s:%d %s:", szTime, modName, basename(file), line, g_logStr[logLevel]);
+        char szTime[CLOG_MAX_TIME_STAMP] = {0};
+        cmlog_timestamp(szTime);
+        snprintf(szLog, CLOG_FIXED_LENGTH_BUFFER_SIZE, "[%s] [%s] %s:%d %s:", szTime, modName, basename(file), line, g_logStr[logLevel]);
 #else
-		snprintf(szLog, CLOG_FIXED_LENGTH_BUFFER_SIZE, "[%u] [%s] %s:%d %s:", numTtiTicks, modName, basename(file), line, g_logStr[logLevel]);
+        snprintf(szLog, CLOG_FIXED_LENGTH_BUFFER_SIZE, "[%u] [%s] %s:%d %s:", numTtiTicks, modName, basename(file), line, g_logStr[logLevel]);
 #endif
-	}
+    }
 
 
-	va_start(argList,fmtStr);
-	vsnprintf(szLog + strlen(szLog), CLOG_FIXED_LENGTH_BUFFER_SIZE - strlen(szLog), fmtStr, argList);
-	va_end(argList);
+    va_start(argList,fmtStr);
+    vsnprintf(szLog + strlen(szLog), CLOG_FIXED_LENGTH_BUFFER_SIZE - strlen(szLog), fmtStr, argList);
+    va_end(argList);
 
-	cmlog_save_log_data((const void*)szLog, strlen(szLog)); 
+    cmlog_save_log_data((const void*)szLog, strlen(szLog)); 
 }
 
 void cmlogSPN(int logLevel, const char* modName, char* file, const char* func, int line, log_sp_arg_e splType, unsigned int splVal, const char* fmtStr, ...)
 {
-	va_list argList;
-	void *szLog = NULL;
+    va_list argList;
+    void *szLog = NULL;
 
-	szLog = (void *)os_ring_buf_get(log_buf);
-	if(NULL == szLog) {
-		g_logsLostCnt++;
-		return;
-	}
+    szLog = (void *)os_ring_buf_get(log_buf);
+    if(NULL == szLog) {
+        g_logsLostCnt++;
+        return;
+    }
 
 #ifdef CMLOG_ALLOW_CLOCK_TIME
-	char szTime[CLOG_MAX_TIME_STAMP] = {0};
-	cmlog_timestamp(szTime);
+    char szTime[CLOG_MAX_TIME_STAMP] = {0};
+    cmlog_timestamp(szTime);
     snprintf(szLog, CLOG_FIXED_LENGTH_BUFFER_SIZE, "[%s] [%s] %s:%d %s:%s:%d:", szTime, modName, basename(file), line, g_logStr[logLevel], g_splStr[splType].name, splVal);
 #else
     snprintf(szLog, CLOG_FIXED_LENGTH_BUFFER_SIZE, "[%u] [%s] %s:%d %s:%s:%d:", numTtiTicks, modName, basename(file), line, g_logStr[logLevel], g_splStr[splType].name, splVal);
@@ -563,29 +563,29 @@ void cmlogSPN(int logLevel, const char* modName, char* file, const char* func, i
     vsnprintf(szLog + strlen(szLog), CLOG_FIXED_LENGTH_BUFFER_SIZE - strlen(szLog), fmtStr, argList);
     va_end(argList);
 
-	cmlog_save_log_data((const void*)szLog, strlen(szLog)); 
+    cmlog_save_log_data((const void*)szLog, strlen(szLog)); 
 }
 
 void cmlogH(int logLevel, const char* modName, char* file, const char* func, int line, const char* fmtStr, const unsigned char* hexdump, int hexlen, ...)
 {
-	char szHex[MAX_LOG_BUF_SIZE*3] = {0};
-	void *szLog = NULL;
+    char szHex[MAX_LOG_BUF_SIZE*3] = {0};
+    void *szLog = NULL;
 
-	szLog = (void *)os_ring_buf_get(log_buf);
-	if(NULL == szLog) {
-		g_logsLostCnt++;
-		return;
-	}
+    szLog = (void *)os_ring_buf_get(log_buf);
+    if(NULL == szLog) {
+        g_logsLostCnt++;
+        return;
+    }
 
-	cmlog_hex_to_asii(szHex, hexdump, hexlen);
+    cmlog_hex_to_asii(szHex, hexdump, hexlen);
 
 #ifdef CMLOG_ALLOW_CLOCK_TIME
-	char szTime[CLOG_MAX_TIME_STAMP] = {0};
-	cmlog_timestamp(szTime);
-	snprintf(szLog, CLOG_FIXED_LENGTH_BUFFER_SIZE, fmtStr, szTime, modName, basename(file), line, g_logStr[logLevel], szHex);
+    char szTime[CLOG_MAX_TIME_STAMP] = {0};
+    cmlog_timestamp(szTime);
+    snprintf(szLog, CLOG_FIXED_LENGTH_BUFFER_SIZE, fmtStr, szTime, modName, basename(file), line, g_logStr[logLevel], szHex);
 #else
-	snprintf(szLog, CLOG_FIXED_LENGTH_BUFFER_SIZE, fmtStr, numTtiTicks, modName, basename(file), line, g_logStr[logLevel], szHex);
+    snprintf(szLog, CLOG_FIXED_LENGTH_BUFFER_SIZE, fmtStr, numTtiTicks, modName, basename(file), line, g_logStr[logLevel], szHex);
 #endif
 
-	cmlog_save_log_data((const void*)szLog, strlen(szLog)); 
+    cmlog_save_log_data((const void*)szLog, strlen(szLog)); 
 }

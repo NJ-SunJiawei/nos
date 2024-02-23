@@ -53,7 +53,7 @@ int os_queue_term(os_queue_t *queue);
 void* os_queue_pop_peek(os_queue_t *queue);
 
 #ifdef __cplusplus
-	}
+    }
 #endif
 
 #endif /* OS_QUEUE_H */

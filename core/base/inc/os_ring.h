@@ -43,7 +43,7 @@ void os_ring_buf_show(os_ring_buf_t *rbuf);
 void os_ring_queue_show(os_ring_queue_t *rque);
 
 #ifdef __cplusplus
-	}
+    }
 #endif
 
 #endif /* OS_QUEUE_H */

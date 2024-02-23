@@ -30,22 +30,22 @@ extern "C" {
 #endif
 #else //1
 #define DECLARE_CMLOG_MODULE(_module_name_, _file_id_, _module_id_) \
-    	PRIVATE const char* CMLOG_MODULE_NAME __attribute__((unused)) = (_module_name_); \
-    	PRIVATE int CMLOG_MODULE_ID __attribute__((unused)) = (_module_id_);
+        PRIVATE const char* CMLOG_MODULE_NAME __attribute__((unused)) = (_module_name_); \
+        PRIVATE int CMLOG_MODULE_ID __attribute__((unused)) = (_module_id_);
 #endif
 
 #define FMTSTR_T   "[%s] [%s] %s:%d %s:\n"
 #define FMTSTR_M   "[%u] [%s] %s:%d %s:\n"
 
 typedef enum {
-	NONE=0,
-	FATAL=1,
-	ERROR=2,
-	WARN=3,
-	INFO=4,
-	DEBUG=5,
-	TRACE=6,
-	MAX_LOG_LEVEL
+    NONE=0,
+    FATAL=1,
+    ERROR=2,
+    WARN=3,
+    INFO=4,
+    DEBUG=5,
+    TRACE=6,
+    MAX_LOG_LEVEL
 } log_level_e;
 
 //////////////////////////////////////
@@ -54,35 +54,35 @@ typedef struct {
 } log_sp_info_t;
 
 #define FOREACH_ID(ARGV_DEF) \
-	ARGV_DEF(DBG_CELLID)   \
-	ARGV_DEF(DBG_PEERID)   \
-	ARGV_DEF(DBG_ENBID)    \
-	ARGV_DEF(DBG_MMEID)    \
-	ARGV_DEF(DBG_CRNTI)    \
-	ARGV_DEF(DBG_UEIDX)    \
-	ARGV_DEF(DBG_UEID)     \
-	ARGV_DEF(DBG_RBID)     \
-	ARGV_DEF(DBG_LCID)     \
-	ARGV_DEF(DBG_LCGID)    \
-	ARGV_DEF(DBG_TRNSID)   \
-	ARGV_DEF(DBG_INSTID)   \
-	ARGV_DEF(PLACEHOLDER)  \
-	ARGV_DEF(ERRNOID)      \
-	ARGV_DEF(MAX_IDs)
+    ARGV_DEF(DBG_CELLID)   \
+    ARGV_DEF(DBG_PEERID)   \
+    ARGV_DEF(DBG_ENBID)    \
+    ARGV_DEF(DBG_MMEID)    \
+    ARGV_DEF(DBG_CRNTI)    \
+    ARGV_DEF(DBG_UEIDX)    \
+    ARGV_DEF(DBG_UEID)     \
+    ARGV_DEF(DBG_RBID)     \
+    ARGV_DEF(DBG_LCID)     \
+    ARGV_DEF(DBG_LCGID)    \
+    ARGV_DEF(DBG_TRNSID)   \
+    ARGV_DEF(DBG_INSTID)   \
+    ARGV_DEF(PLACEHOLDER)  \
+    ARGV_DEF(ERRNOID)      \
+    ARGV_DEF(MAX_IDs)
 
 #define ARGV_DEF(id)   {#id},
 
 PRIVATE const log_sp_info_t g_splStr[] = {
-	FOREACH_ID(ARGV_DEF)
+    FOREACH_ID(ARGV_DEF)
 };
 
 #define ARGV_ENUM(id) id,
 typedef enum {
-	FOREACH_ID(ARGV_ENUM)
+    FOREACH_ID(ARGV_ENUM)
 } log_sp_arg_e;
 ////////////////////////////////////
 
-typedef	log_sp_arg_e os_clog_sp_arg_e;
+typedef    log_sp_arg_e os_clog_sp_arg_e;
 typedef log_level_e os_clog_level_e;
 
 typedef unsigned int LOGID;
@@ -110,39 +110,40 @@ do { \
 #define CMLOGSPX(_level, _splenum, _splArg, _lstr, ...)   CMLOG_ARG_SPX(CMLOG_MODULE_NAME, _level, _splenum, _splArg, _lstr, ##__VA_ARGS__)
 #define CMLOGH(_level, _lstr, _hexdata, _hexlen)          CMLOG_ARG_H(CMLOG_MODULE_NAME, _level, _lstr, _hexdata, _hexlen)
 
+
 #ifdef CMLOG_ALLOW_CLOCK_TIME
 #define CMLOG_ARG_H(_modName, _level, _fmtStr, ...) \
-				do { \
-					if( _level <= g_logLevel && g_modMask & CMLOG_MODULE_ID)\
-					{ \
-						cmlogH(_level, _modName, __FILE__, __OS_FUNC__, __LINE__, FMTSTR_T _fmtStr "\n", ##__VA_ARGS__); \
-					} \
-				} while (0)
+                do { \
+                    if( _level <= g_logLevel && g_modMask & CMLOG_MODULE_ID)\
+                    { \
+                        cmlogH(_level, _modName, __FILE__, __OS_FUNC__, __LINE__, FMTSTR_T _fmtStr "\n", ##__VA_ARGS__); \
+                    } \
+                } while (0)
 #else
 #define CMLOG_ARG_H(_modName, _level, _fmtStr, ...) \
-				do { \
-					if( _level <= g_logLevel && g_modMask & CMLOG_MODULE_ID)\
-					{ \
-						cmlogH(_level, _modName, __FILE__, __OS_FUNC__, __LINE__, FMTSTR_M _fmtStr "\n", ##__VA_ARGS__); \
-					} \
-				} while (0)
+                do { \
+                    if( _level <= g_logLevel && g_modMask & CMLOG_MODULE_ID)\
+                    { \
+                        cmlogH(_level, _modName, __FILE__, __OS_FUNC__, __LINE__, FMTSTR_M _fmtStr "\n", ##__VA_ARGS__); \
+                    } \
+                } while (0)
 #endif
 
 #define CMLOG_ARG_X(_contentFg, _modName, _level, _fmtStr, ...) \
-				do { \
-					if( _level <= g_logLevel && g_modMask & CMLOG_MODULE_ID)\
-					{ \
-						cmlogN(_contentFg, _level, _modName, __FILE__, __OS_FUNC__, __LINE__, _fmtStr "\n", ##__VA_ARGS__); \
-					} \
-				} while (0)
+                do { \
+                    if( _level <= g_logLevel && g_modMask & CMLOG_MODULE_ID)\
+                    { \
+                        cmlogN(_contentFg, _level, _modName, __FILE__, __OS_FUNC__, __LINE__, _fmtStr "\n", ##__VA_ARGS__); \
+                    } \
+                } while (0)
 
 #define CMLOG_ARG_SPX(_modName, _level, _splenum, _splArg, _fmtStr, ...) \
-				do { \
-					if( _level <= g_logLevel && g_modMask & CMLOG_MODULE_ID)\
-					{ \
-						cmlogSPN(_level, _modName, __FILE__, __OS_FUNC__,__LINE__, _splenum, _splArg, _fmtStr "\n", ##__VA_ARGS__); \
-					} \
-				} while (0)
+                do { \
+                    if( _level <= g_logLevel && g_modMask & CMLOG_MODULE_ID)\
+                    { \
+                        cmlogSPN(_level, _modName, __FILE__, __OS_FUNC__,__LINE__, _splenum, _splArg, _fmtStr "\n", ##__VA_ARGS__); \
+                    } \
+                } while (0)
 
 void cmlogN(int content_only, int logLevel, const char* modName, char* file, const char* func, int line, const char* fmtStr, ...);
 void cmlogSPN(int logLevel, const char* modName, char* file, const char* func, int line, log_sp_arg_e splType, unsigned int splVal, const char* fmtStr, ...);
@@ -196,7 +197,7 @@ void cdlog_hexdump_func(os_cdlog_level_e level, int domain_id, const unsigned ch
     do { \
         if (os_likely(expr)) ; \
         else { \
-			os_log(ERROR, "%s: Expectation `%s' failed.", OS_FUNC, #expr); \
+            os_log(ERROR, "%s: Expectation `%s' failed.", OS_FUNC, #expr); \
         } \
     } while (0)
 
@@ -204,7 +205,7 @@ void cdlog_hexdump_func(os_cdlog_level_e level, int domain_id, const unsigned ch
     do { \
         if (os_likely(expr)) ; \
         else { \
-			os_log(ERROR, "%s: Expectation `%s' failed.", OS_FUNC, #expr); \
+            os_log(ERROR, "%s: Expectation `%s' failed.", OS_FUNC, #expr); \
             return; \
         } \
     } while (0)
@@ -213,7 +214,7 @@ void cdlog_hexdump_func(os_cdlog_level_e level, int domain_id, const unsigned ch
     do { \
         if (os_likely(expr)) ; \
         else { \
-			os_log(ERROR, "%s: Expectation `%s' failed.", OS_FUNC, #expr); \
+            os_log(ERROR, "%s: Expectation `%s' failed.", OS_FUNC, #expr); \
             return (val); \
         } \
     } while (0)

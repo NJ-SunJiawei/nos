@@ -181,7 +181,7 @@ int os_sctp_connect(os_sock_t *sock, os_sockaddr_t *sa_list)
     }
 
     if (addr == NULL) {
-		os_logsp(ERROR, ERRNOID, os_socket_errno, "sctp_connect() [%s]:%d failed", OS_ADDR(sa_list, buf), OS_PORT(sa_list));
+        os_logsp(ERROR, ERRNOID, os_socket_errno, "sctp_connect() [%s]:%d failed", OS_ADDR(sa_list, buf), OS_PORT(sa_list));
         return OS_ERROR;
     }
 
@@ -282,7 +282,7 @@ PRIVATE int determine_sctp_sockopt_event_subscribe_size(void)
 
     sctp_sockopt_event_subscribe_size = buf_len;
 
-	os_log(DEBUG, "sizes of 'struct sctp_event_subscribe': "
+    os_log(DEBUG, "sizes of 'struct sctp_event_subscribe': "
             "compile-time %zu, kernel: %u",
             sizeof(struct sctp_event_subscribe),
             sctp_sockopt_event_subscribe_size);
@@ -407,7 +407,7 @@ PRIVATE int determine_sctp_sockopt_paddrparams_size(void)
 
     sctp_sockopt_paddrparams_size = buf_len;
 
-	os_log(DEBUG, "sizes of 'struct sctp_paddrparams': "
+    os_log(DEBUG, "sizes of 'struct sctp_paddrparams': "
             "compile-time %zu, kernel: %u",
             sizeof(struct sctp_paddrparams),
             sctp_sockopt_paddrparams_size);
@@ -476,13 +476,13 @@ int os_sctp_peer_addr_params(os_sock_t *sock, os_sockopt_t *option)
     }
 
 #if !defined(__FreeBSD__)
-	os_log(DEBUG, "OLD spp_flags = 0x%x hbinter = %d pathmax = %d, sackdelay = %d",
+    os_log(DEBUG, "OLD spp_flags = 0x%x hbinter = %d pathmax = %d, sackdelay = %d",
             paddrparams.spp_flags,
             paddrparams.spp_hbinterval,
             paddrparams.spp_pathmaxrxt,
             paddrparams.spp_sackdelay);
 #else
-	os_log(DEBUG, "OLD spp_flags = 0x%x hbinter = %d pathmax = %d",
+    os_log(DEBUG, "OLD spp_flags = 0x%x hbinter = %d pathmax = %d",
             paddrparams.spp_flags,
             paddrparams.spp_hbinterval,
             paddrparams.spp_pathmaxrxt);
@@ -508,13 +508,13 @@ int os_sctp_peer_addr_params(os_sock_t *sock, os_sockopt_t *option)
 #endif
 
 #if !defined(__FreeBSD__)
-	os_log(DEBUG, "NEW spp_flags = 0x%x hbinter = %d pathmax = %d, sackdelay = %d",
+    os_log(DEBUG, "NEW spp_flags = 0x%x hbinter = %d pathmax = %d, sackdelay = %d",
             paddrparams.spp_flags,
             paddrparams.spp_hbinterval,
             paddrparams.spp_pathmaxrxt,
             paddrparams.spp_sackdelay);
 #else
-	os_log(DEBUG, "NEW spp_flags = 0x%x hbinter = %d pathmax = %d",
+    os_log(DEBUG, "NEW spp_flags = 0x%x hbinter = %d pathmax = %d",
             paddrparams.spp_flags,
             paddrparams.spp_hbinterval,
             paddrparams.spp_pathmaxrxt);
@@ -540,7 +540,7 @@ int os_sctp_rto_info(os_sock_t *sock, os_sockopt_t *option)
         return OS_ERROR;
     }
 
-	os_log(DEBUG, "OLD RTO (initial:%d max:%d min:%d)",
+    os_log(DEBUG, "OLD RTO (initial:%d max:%d min:%d)",
             rtoinfo.srto_initial,
             rtoinfo.srto_max,
             rtoinfo.srto_min);
@@ -555,7 +555,7 @@ int os_sctp_rto_info(os_sock_t *sock, os_sockopt_t *option)
         return OS_ERROR;
     }
 
-	os_log(DEBUG, "New RTO (initial:%d max:%d min:%d)",
+    os_log(DEBUG, "New RTO (initial:%d max:%d min:%d)",
             rtoinfo.srto_initial,
             rtoinfo.srto_max,
             rtoinfo.srto_min);
@@ -580,7 +580,7 @@ int os_sctp_initmsg(os_sock_t *sock, os_sockopt_t *option)
         return OS_ERROR;
     }
 
-	os_log(DEBUG, "Old INITMSG (numout:%d maxin:%d maxattempt:%d maxinit_to:%d)",
+    os_log(DEBUG, "Old INITMSG (numout:%d maxin:%d maxattempt:%d maxinit_to:%d)",
                 initmsg.sinit_num_ostreams,
                 initmsg.sinit_max_instreams,
                 initmsg.sinit_max_attempts,
@@ -593,11 +593,11 @@ int os_sctp_initmsg(os_sock_t *sock, os_sockopt_t *option)
 
     if (setsockopt(sock->fd, IPPROTO_SCTP, SCTP_INITMSG,
                             &initmsg, sizeof(initmsg)) != 0) {
-       	os_logsp(ERROR, ERRNOID, os_socket_errno, "setsockopt for SCTP_INITMSG failed");
+           os_logsp(ERROR, ERRNOID, os_socket_errno, "setsockopt for SCTP_INITMSG failed");
         return OS_ERROR;
     }
 
-	os_log(DEBUG, "New INITMSG (numout:%d maxin:%d maxattempt:%d maxinit_to:%d)",
+    os_log(DEBUG, "New INITMSG (numout:%d maxin:%d maxattempt:%d maxinit_to:%d)",
                 initmsg.sinit_num_ostreams,
                 initmsg.sinit_max_instreams,
                 initmsg.sinit_max_attempts,
@@ -610,7 +610,7 @@ int os_sctp_nodelay(os_sock_t *sock, int on)
 {
     os_assert(sock);
 
-	os_log(DEBUG, "Turn on SCTP_NODELAY");
+    os_log(DEBUG, "Turn on SCTP_NODELAY");
     if (setsockopt(sock->fd, IPPROTO_SCTP, SCTP_NODELAY,
                 &on, sizeof(on)) != 0) {
         os_logsp(ERROR, ERRNOID, os_socket_errno, "setsockopt(IPPROTO_SCTP, SCTP_NODELAY) failed");

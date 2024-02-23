@@ -290,9 +290,9 @@ int os_queue_term(os_queue_t *queue)
 void* os_queue_pop_peek(os_queue_t *queue)
 {
     if (os_queue_empty(queue)) {
-		return NULL;
-	}else{
-		return queue->data[queue->out];
-	}
+        return NULL;
+    }else{
+        return queue->data[queue->out];
+    }
 }
 

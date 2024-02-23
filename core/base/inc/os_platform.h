@@ -502,7 +502,7 @@ PRIVATE os_inline os_uint24_t os_htobe24(os_uint24_t x)
 #define OS_OBJECT_REF(__oBJ) \
     ((__oBJ)->reference_count)++;  os_log(DEBUG, "[REF] %d", ((__oBJ)->reference_count))
 #define OS_OBJECT_UNREF(__oBJ) \
-	os_log(DEBUG, "[UNREF] %d", ((__oBJ)->reference_count)); ((__oBJ)->reference_count)--
+    os_log(DEBUG, "[UNREF] %d", ((__oBJ)->reference_count)); ((__oBJ)->reference_count)--
 #define OS_OBJECT_IS_REF(__oBJ) ((__oBJ)->reference_count > 1)
 
 #ifdef __cplusplus

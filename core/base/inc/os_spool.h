@@ -19,11 +19,11 @@ extern "C" {
 typedef unsigned int os_index_t;
 
 #define OS_POOL(pool, type) \
-	struct { \
-		const char *name; \
-		int head, tail, size, avail; \
-		type **free, *array, **index; \
-	} pool
+    struct { \
+        const char *name; \
+        int head, tail, size, avail; \
+        type **free, *array, **index; \
+    } pool
 
 #define os_pool_init(pool, _size) do { \
     int i; \
@@ -44,7 +44,7 @@ typedef unsigned int os_index_t;
 
 #define os_pool_final(pool) do { \
     if (((pool)->size != (pool)->avail)){ \
-		os_log(ERROR, "%d in '%s[%d]' were not released", (pool)->size - (pool)->avail, (pool)->name, (pool)->size); \
+        os_log(ERROR, "%d in '%s[%d]' were not released", (pool)->size - (pool)->avail, (pool)->name, (pool)->size); \
     } \
     free((pool)->free); \
     free((pool)->array); \
@@ -123,7 +123,7 @@ typedef unsigned int os_index_t;
 
 #define os_index_final(pool) do { \
     if (((pool)->size != (pool)->avail)) { \
-		os_log(ERROR, "%d in '%s[%d]' were not released", (pool)->size - (pool)->avail, (pool)->name, (pool)->size); \
+        os_log(ERROR, "%d in '%s[%d]' were not released", (pool)->size - (pool)->avail, (pool)->name, (pool)->size); \
     } \
     free((pool)->free); \
     free((pool)->array); \
@@ -131,7 +131,7 @@ typedef unsigned int os_index_t;
 } while (0)
 
 #ifdef __cplusplus
-	}
+    }
 #endif
 
 #endif
