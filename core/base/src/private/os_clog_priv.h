@@ -5,7 +5,7 @@
  *Current Version:
  *Author: Created by sjw --- 2024.02
 ************************************************************************/
-#if !defined(OS_BASE_INSIDE) && !defined(OS_BASE_COMPILATION)
+#if !defined(OS_BASE_COMPILATION)
 #error "This header file cannot be directly referenced."
 #endif
 
