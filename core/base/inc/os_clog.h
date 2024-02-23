@@ -21,11 +21,17 @@ extern "C" {
 #endif
 
 
+#if 1
 #ifndef CMLOG_MODULE_ID
 #define CMLOG_MODULE_ID     0x00000001
 #endif
 #ifndef CMLOG_MODULE_NAME
 #define CMLOG_MODULE_NAME   "os"
+#endif
+#else //1
+#define DECLARE_CMLOG_MODULE(_module_name_, _file_id_, _module_id_) \
+    	PRIVATE const char* CMLOG_MODULE_NAME __attribute__((unused)) = (_module_name_); \
+    	PRIVATE int CMLOG_MODULE_ID __attribute__((unused)) = (_module_id_);
 #endif
 
 #define FMTSTR_T   "[%s] [%s] %s:%d %s:\n"
@@ -84,7 +90,6 @@ typedef unsigned int LOGID;
 extern int g_logLevel; 
 extern unsigned int g_modMask; 
 
-
 /****************************CTLOG**********************************************/
 #define RLOGX(_level, _splenum, _splArg, _lstr, ...) \
 do { \
@@ -108,7 +113,7 @@ do { \
 #ifdef CMLOG_ALLOW_CLOCK_TIME
 #define CMLOG_ARG_H(_modName, _level, _fmtStr, ...) \
 				do { \
-					if( _level <= g_logLevel || g_modMask & CMLOG_MODULE_ID)\
+					if( _level <= g_logLevel && g_modMask & CMLOG_MODULE_ID)\
 					{ \
 						cmlogH(_level, _modName, __FILE__, __OS_FUNC__, __LINE__, FMTSTR_T _fmtStr "\n", ##__VA_ARGS__); \
 					} \
@@ -116,7 +121,7 @@ do { \
 #else
 #define CMLOG_ARG_H(_modName, _level, _fmtStr, ...) \
 				do { \
-					if( _level <= g_logLevel || g_modMask & CMLOG_MODULE_ID)\
+					if( _level <= g_logLevel && g_modMask & CMLOG_MODULE_ID)\
 					{ \
 						cmlogH(_level, _modName, __FILE__, __OS_FUNC__, __LINE__, FMTSTR_M _fmtStr "\n", ##__VA_ARGS__); \
 					} \
@@ -125,7 +130,7 @@ do { \
 
 #define CMLOG_ARG_X(_contentFg, _modName, _level, _fmtStr, ...) \
 				do { \
-					if( _level <= g_logLevel || g_modMask & CMLOG_MODULE_ID)\
+					if( _level <= g_logLevel && g_modMask & CMLOG_MODULE_ID)\
 					{ \
 						cmlogN(_contentFg, _level, _modName, __FILE__, __OS_FUNC__, __LINE__, _fmtStr "\n", ##__VA_ARGS__); \
 					} \
@@ -133,7 +138,7 @@ do { \
 
 #define CMLOG_ARG_SPX(_modName, _level, _splenum, _splArg, _fmtStr, ...) \
 				do { \
-					if( _level <= g_logLevel || g_modMask & CMLOG_MODULE_ID)\
+					if( _level <= g_logLevel && g_modMask & CMLOG_MODULE_ID)\
 					{ \
 						cmlogSPN(_level, _modName, __FILE__, __OS_FUNC__,__LINE__, _splenum, _splArg, _fmtStr "\n", ##__VA_ARGS__); \
 					} \

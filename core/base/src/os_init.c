@@ -9,7 +9,7 @@
 #include "os_init.h"
 
 int g_logLevel = TRACE; 
-unsigned int g_modMask = 0; 
+unsigned int g_modMask = 0xFFFFFFFF; 
 
 PRIVATE os_context_t self = {
     .buf.pool = 8,
