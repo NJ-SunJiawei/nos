@@ -13,7 +13,7 @@ void test_1(void)
 	time_start = tv.tv_sec*1000000LL + tv.tv_usec;
 
 	for(int i = 0; i < LOG_TEST_NUM; ++i){
-		os_log(TRACE, "ttttttttttttttttttttttttttttttttttttt%d", i);
+		os_log(ERROR, "ttttttttttttttttttttttttttttttttttttt%d", i);
 	}
     gettimeofday(&tv, NULL);
 	time_stop = tv.tv_sec*1000000LL + tv.tv_usec;

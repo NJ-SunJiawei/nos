@@ -36,7 +36,7 @@ os_ring_queue_t *os_ring_queue_create(unsigned int size)
     os_ring_queue_t *rque = NULL;
     os_assert(size);
 
-	rque = malloc(sizeof(os_ring_queue_t));
+	rque = (os_ring_queue_t *)malloc(sizeof(os_ring_queue_t));
 	os_assert(rque);
 
 	rque->que_size = size;
@@ -282,7 +282,7 @@ os_ring_buf_t *os_ring_buf_create(unsigned int count, unsigned int size)
     os_assert(count);
     os_assert(size);
 
-	rbuf = malloc(sizeof(os_ring_buf_t));
+	rbuf = (os_ring_buf_t *)malloc(sizeof(os_ring_buf_t));
 	os_assert(rbuf);
 
 	rbuf->buf_size = count;

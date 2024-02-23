@@ -47,7 +47,8 @@ typedef struct os_poll_s os_poll_t;
 
 /****************************************/
 /***************global*******************/
-
+extern int g_logLevel; 
+extern unsigned int g_modMask; 
 
 #ifdef __cplusplus
 }

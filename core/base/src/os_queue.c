@@ -57,7 +57,7 @@ typedef struct os_queue_s {
  */
 os_queue_t *os_queue_create(unsigned int capacity)
 {
-    os_queue_t *queue = calloc(1, sizeof *queue);
+    os_queue_t *queue = (os_queue_t *)calloc(1, sizeof *queue);
     os_expect_or_return_val(queue, NULL);
     os_assert(queue);
 
