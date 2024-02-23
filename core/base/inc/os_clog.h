@@ -100,42 +100,42 @@ do { \
 
 #define RLOGX_CFG(_level, _splenum, _splArg, _lstr, ...)  RLOGX(_level, _splenum, _splArg, _lstr, ##__VA_ARGS__)
 /****************************CMLOG**********************************************/
-#define CMPRINT(_level, _lstr, ...)                       CMLOG_ARG_X(1, _level, _lstr, ##__VA_ARGS__)
-#define CMLOGX(_level, _lstr, ...)                        CMLOG_ARG_X(0, _level, _lstr, ##__VA_ARGS__)
-#define CMLOGSPX(_level, _splenum, _splArg, _lstr, ...)   CMLOG_ARG_SPX(_level, _splenum, _splArg, _lstr, ##__VA_ARGS__)
-#define CMLOGH(_level, _lstr, _hexdata, _hexlen)          CMLOG_ARG_H(_level, _lstr, _hexdata, _hexlen)
+#define CMPRINT(_level, _lstr, ...)                       CMLOG_ARG_X(1, CMLOG_MODULE_NAME, _level, _lstr, ##__VA_ARGS__)
+#define CMLOGX(_level, _lstr, ...)                        CMLOG_ARG_X(0, CMLOG_MODULE_NAME, _level, _lstr, ##__VA_ARGS__)
+#define CMLOGSPX(_level, _splenum, _splArg, _lstr, ...)   CMLOG_ARG_SPX(CMLOG_MODULE_NAME, _level, _splenum, _splArg, _lstr, ##__VA_ARGS__)
+#define CMLOGH(_level, _lstr, _hexdata, _hexlen)          CMLOG_ARG_H(CMLOG_MODULE_NAME, _level, _lstr, _hexdata, _hexlen)
 
 #ifdef CMLOG_ALLOW_CLOCK_TIME
-#define CMLOG_ARG_H(_level, _fmtStr, ...) \
+#define CMLOG_ARG_H(_modName, _level, _fmtStr, ...) \
 				do { \
 					if( _level <= g_logLevel || g_modMask & CMLOG_MODULE_ID)\
 					{ \
-						cmlogH(_level, CMLOG_MODULE_NAME, __FILE__, __OS_FUNC__, __LINE__, FMTSTR_T _fmtStr "\n", ##__VA_ARGS__); \
+						cmlogH(_level, _modName, __FILE__, __OS_FUNC__, __LINE__, FMTSTR_T _fmtStr "\n", ##__VA_ARGS__); \
 					} \
 				} while (0)
 #else
-#define CMLOG_ARG_H(_level, _fmtStr, ...) \
+#define CMLOG_ARG_H(_modName, _level, _fmtStr, ...) \
 				do { \
 					if( _level <= g_logLevel || g_modMask & CMLOG_MODULE_ID)\
 					{ \
-						cmlogH(_level, CMLOG_MODULE_NAME, __FILE__, __OS_FUNC__, __LINE__, FMTSTR_M _fmtStr "\n", ##__VA_ARGS__); \
+						cmlogH(_level, _modName, __FILE__, __OS_FUNC__, __LINE__, FMTSTR_M _fmtStr "\n", ##__VA_ARGS__); \
 					} \
 				} while (0)
 #endif
 
-#define CMLOG_ARG_X(_contentFg, _level, _fmtStr, ...) \
+#define CMLOG_ARG_X(_contentFg, _modName, _level, _fmtStr, ...) \
 				do { \
 					if( _level <= g_logLevel || g_modMask & CMLOG_MODULE_ID)\
 					{ \
-						cmlogN(_contentFg, _level, CMLOG_MODULE_NAME, __FILE__, __OS_FUNC__, __LINE__, _fmtStr "\n", ##__VA_ARGS__); \
+						cmlogN(_contentFg, _level, _modName, __FILE__, __OS_FUNC__, __LINE__, _fmtStr "\n", ##__VA_ARGS__); \
 					} \
 				} while (0)
 
-#define CMLOG_ARG_SPX(_level, _splenum, _splArg, _fmtStr, ...) \
+#define CMLOG_ARG_SPX(_modName, _level, _splenum, _splArg, _fmtStr, ...) \
 				do { \
 					if( _level <= g_logLevel || g_modMask & CMLOG_MODULE_ID)\
 					{ \
-						cmlogSPN(_level, CMLOG_MODULE_NAME, __FILE__, __OS_FUNC__,__LINE__, _splenum, _splArg, _fmtStr "\n", ##__VA_ARGS__); \
+						cmlogSPN(_level, _modName, __FILE__, __OS_FUNC__,__LINE__, _splenum, _splArg, _fmtStr "\n", ##__VA_ARGS__); \
 					} \
 				} while (0)
 
