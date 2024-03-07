@@ -16,7 +16,7 @@
 extern "C" {
 #endif
 
-PRIVATE const char* g_logStr[MAX_LOG_LEVEL] = { "NONE", "FATAL", "ERROR", "WARN", "INFO", "DEBUG", "TRACE"};
+PRIVATE const char* g_logStr[MAX_LOG_LEVEL] = { "NONE", "FATAL", "ERROR", "WARN", "EVENT", "INFO", "DEBUG", "TRACE"};
 
 #define CLOG_SEGFAULT_STR "Segmentation Fault Occurred:"
 
@@ -65,7 +65,6 @@ typedef enum cLogCntLmt
 }cLogCntLmt;
 
 typedef enum _endian {little_endian, big_endian} EndianType;
-
 
 #ifdef __cplusplus
 }

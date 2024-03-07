@@ -60,7 +60,6 @@ typedef struct os_buf_pool_s {
     OS_POOL(cluster_lil, os_cluster_lil_t);
     OS_POOL(cluster_mid, os_cluster_mid_t);
     OS_POOL(cluster_big, os_cluster_big_t);
-
     os_thread_mutex_t mutex;
 } os_buf_pool_t;
 
@@ -124,7 +123,7 @@ void os_buf_default_destroy(void)
 #endif
 }
 
-os_buf_pool_t *os_buf_pool_create(os_buf_config_t *config)
+os_buf_pool_t *os_buf_pool_create_debug(os_buf_config_t *config)
 {
     os_buf_pool_t *pool = NULL;
 #if OS_USE_TALLOC == 0
@@ -165,7 +164,7 @@ os_buf_pool_t *os_buf_pool_create(os_buf_config_t *config)
 #define os_buf_pool_final(pool) do { \
     if (((pool)->size != (pool)->avail)) { \
         int i; \
-        os_log(ERROR, "%d in '%s[%d]' were not released", (pool)->size - (pool)->avail, (pool)->name, (pool)->size); \
+        os_log(ERROR, "%d in '%s[%d]' were not released.", (pool)->size - (pool)->avail, (pool)->name, (pool)->size); \
         for (i = 0; i < (pool)->size; i++) { \
             os_buf_t *buf = (pool)->index[i]; \
             if (buf) { \
@@ -467,20 +466,16 @@ PRIVATE void cluster_free(os_buf_pool_t *pool, os_cluster_t *cluster)
         os_pool_free(&pool->cluster_512, (os_cluster_512_t*)cluster->buffer);
         break;
     case OS_CLUSTER_1024_SIZE:
-        os_pool_free(
-                &pool->cluster_1024, (os_cluster_1024_t*)cluster->buffer);
+        os_pool_free(&pool->cluster_1024, (os_cluster_1024_t*)cluster->buffer);
         break;
     case OS_CLUSTER_2048_SIZE:
-        os_pool_free(
-                &pool->cluster_2048, (os_cluster_2048_t*)cluster->buffer);
+        os_pool_free(&pool->cluster_2048, (os_cluster_2048_t*)cluster->buffer);
         break;
     case OS_CLUSTER_8192_SIZE:
-        os_pool_free(
-                &pool->cluster_8192, (os_cluster_8192_t*)cluster->buffer);
+        os_pool_free(&pool->cluster_8192, (os_cluster_8192_t*)cluster->buffer);
         break;
     case OS_CLUSTER_32768_SIZE:
-        os_pool_free(
-                &pool->cluster_32768, (os_cluster_32768_t*)cluster->buffer);
+        os_pool_free(&pool->cluster_32768, (os_cluster_32768_t*)cluster->buffer);
         break;
     case OS_CLUSTER_LIL_SIZE:
         os_pool_free(&pool->cluster_lil, (os_cluster_lil_t*)cluster->buffer);
@@ -603,7 +598,7 @@ void os_buf_show_avail(os_buf_pool_t *pool)
     fprintf(stderr, "OS_CLUSTER_1024_SIZE   size[%d], avail[%d]!\n", os_pool_size(&pool->cluster_1024), os_pool_avail(&pool->cluster_1024));
     fprintf(stderr, "OS_CLUSTER_2048_SIZE   size[%d], avail[%d]!\n", os_pool_size(&pool->cluster_2048), os_pool_avail(&pool->cluster_2048));
     fprintf(stderr, "OS_CLUSTER_8192_SIZE   size[%d], avail[%d]!\n", os_pool_size(&pool->cluster_8192), os_pool_avail(&pool->cluster_8192));
-    fprintf(stderr, "OS_CLUSTER_32768_SIZE     size[%d], avail[%d]!\n", os_pool_size(&pool->cluster_32768), os_pool_avail(&pool->cluster_32768));
+    fprintf(stderr, "OS_CLUSTER_32768_SIZE  size[%d], avail[%d]!\n", os_pool_size(&pool->cluster_32768), os_pool_avail(&pool->cluster_32768));
     fprintf(stderr, "OS_CLUSTER_LIL_SIZE    size[%d], avail[%d]!\n", os_pool_size(&pool->cluster_lil), os_pool_avail(&pool->cluster_lil));
     fprintf(stderr, "OS_CLUSTER_MID_SIZE    size[%d], avail[%d]!\n", os_pool_size(&pool->cluster_mid), os_pool_avail(&pool->cluster_mid));
     fprintf(stderr, "OS_CLUSTER_BIG_SIZE    size[%d], avail[%d]!\n", os_pool_size(&pool->cluster_big), os_pool_avail(&pool->cluster_big));

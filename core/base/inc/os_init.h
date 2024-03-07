@@ -59,8 +59,6 @@
 #include "os_queue.h"
 #include "os_ring.h"
 
-
-
 #undef OS_BASE_INSIDE
 
 #ifdef __cplusplus

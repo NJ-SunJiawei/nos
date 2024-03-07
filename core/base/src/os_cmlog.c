@@ -168,7 +168,7 @@ PRIVATE void cmlog_timestamp(char* ts)
     os_gettimeofday(&tv);
     os_localtime(tv.tv_sec, &tm);
 
-       sprintf(ts,"%04d/%02d/%02d %02d:%02d:%02d.%03d", tm.tm_year+1900, tm.tm_mon+1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec, (int)(tv.tv_usec/1000));
+    sprintf(ts,"%04d/%02d/%02d %02d:%02d:%02d.%03d", tm.tm_year+1900, tm.tm_mon+1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec, (int)(tv.tv_usec/1000));
 }
 #endif
 
@@ -180,18 +180,15 @@ PRIVATE void cmlog_timestamp_name(char* ts)
     os_gettimeofday(&tv);
     os_localtime(tv.tv_sec, &tm);
 
-       sprintf(ts,"%04d%02d%02d_%02d:%02d:%02d.%03d", tm.tm_year+1900, tm.tm_mon+1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec, (int)(tv.tv_usec/1000));
+    sprintf(ts,"%04d%02d%02d_%02d:%02d:%02d.%03d", tm.tm_year+1900, tm.tm_mon+1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec, (int)(tv.tv_usec/1000));
 }
 
-
-#ifdef CMLOG_ALLOW_CONSOLE_LOGS
 PRIVATE void cmlog_add_stderr(void)
 {
     os_cmlog_set_filename("stderr");
     g_fp = stderr;
     return;
 }
-#endif
 
 PRIVATE void cmlog_create_new_log_file(void)
 {
@@ -233,6 +230,7 @@ PRIVATE void cmlog_create_new_log_file(void)
    if( fp == NULL ) {
       fprintf(stderr, "Failed to open log file %s\n", g_fileList[g_nCurrFileIdx]);
       perror("Error opening file");
+      cmlog_add_stderr();
       return;
    }
 
@@ -306,6 +304,7 @@ PRIVATE void* cmlog_cirbuf_read_thread(void* arg)
     return NULL;
 }
 
+
 void os_cmlog_set_filesize_limit(unsigned int maxFileSize)
 {
     g_uiMaxFileSizeLimit = (maxFileSize == 0) ? MAX_FILE_SIZE : maxFileSize*1048576;
@@ -376,7 +375,7 @@ void os_cmlog_init(void)
         exit(0);
     }
 
-#ifdef CMLOG_ALLOW_CONSOLE_LOGS
+ #ifdef CMLOG_ALLOW_CONSOLE_LOGS
     cmlog_add_stderr();
 #else
     cmlog_create_new_log_file();
@@ -456,6 +455,14 @@ void os_cmlog_update_ticks(void)
       os_cmlog_reset_rate_limit();
    }
    return;
+}
+
+void abort_flush_data(void)
+{
+    cmlog_read_final();
+    fflush(g_fp);
+
+    return;
 }
 
 PRIVATE void cmlog_save_log_data(const void* buf, unsigned int len)

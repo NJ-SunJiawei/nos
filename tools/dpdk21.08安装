@@ -1,0 +1,72 @@
+设置虚拟机增加2个网卡，启动cpu虚拟化和IOMMU
+
+apt install meson ninja-build build-essential python3-pip
+apt install python3-pyelftools
+
+
+lscpu查看cpu
+cat  /proc/cpuinfo |grep --color pse
+cat  /proc/cpuinfo |grep --color pdpe1gb
+
+
+2M大页设置
+numa架构：echo 512 > /sys/devices/system/node/node0/hugepages/hugepages-2048kB/nr_hugepages
+非numa：echo 512 > /sys/kernel/mm/hugepages/hugepages-2048kB/nr_hugepages
+
+查看设置：cat /proc/meminfo | grep Huge
+mkdir /mnt/huge
+mount -t hugetlbfs nodev /mnt/huge
+
+安装：
+meson build
+？？？meson -Dbuildtype=debug -Dexamples=ALL -Denable_kmods=true build
+
+buildtools/meson.build:45:8: ERROR: Problem encountered: missing python module: elftools
+pip install pyelftools --upgrade
+pip3 install pyelftools --upgrade 
+
+ninja -C build
+cd build&&ninja install 或者ninja -C build install
+执行完之后所有的库都安装在 /usr/local/lib/x86_64-linux-gnu/ 目录。可执行程序和脚本都安装在 /usr/local/bin/ 目录。卸载只需执行 ninja uninstall 即可。至此环境安装完成。
+ldconfig 刷新链接
+
+
+编译DPDK应用：cd /usr/local/share/dpdk/examples  +  make
+
+igb_uio模块安装
+https://blog.csdn.net/qz652219228/article/details/131177544?spm=1001.2101.3001.6650.8&utm_medium=distribute.pc_relevant.none-task-blog-2%7Edefault%7EBlogCommendFromBaidu%7ERate-8-131177544-blog-134791490.235%5Ev43%5Epc_blog_bottom_relevance_base8&depth_1-utm_source=distribute.pc_relevant.none-task-blog-2%7Edefault%7EBlogCommendFromBaidu%7ERate-8-131177544-blog-134791490.235%5Ev43%5Epc_blog_bottom_relevance_base8
+https://blog.csdn.net/weixin_42876519/article/details/134336364?spm=1001.2101.3001.6650.5&utm_medium=distribute.pc_relevant.none-task-blog-2%7Edefault%7EBlogCommendFromBaidu%7ERate-5-134336364-blog-135173532.235%5Ev43%5Epc_blog_bottom_relevance_base8&depth_1-utm_source=distribute.pc_relevant.none-task-blog-2%7Edefault%7EBlogCommendFromBaidu%7ERate-5-134336364-blog-135173532.235%5Ev43%5Epc_blog_bottom_relevance_base8&utm_relevant_index=10
+
+驱动说明
+https://doc.dpdk.org/guides/linux_gsg/linux_drivers.html
+https://blog.csdn.net/legend050709/article/details/123431602
+
+
+igb_uio驱动安装：
+git clone http://dpdk.org/git/dpdk-kmods
+cd dpdk-kmods/linux/igb_uio
+make
+
+挂载驱动
+cd dpdk-kmods/linux/igb_uio
+modprobe uio
+rmmod igb_uio.ko
+insmod igb_uio.ko intr_mode=legacy  加载驱动时要带着参数intr_mode=legacy，如果不加参数，将会有问题！
+
+DPDK网卡绑定
+ifconfig ens38 down
+dpdk-devbind.py -b igb_uio ens34
+python3 dpdk-devbind.py --bind=vfio-pci ens38  需要支持IOMMU
+
+查看网卡状态
+dpdk-devbind.py --status
+
+解绑网卡：
+网卡 ens34 和 ens35 被 DPDK 占用后，ifconfig 里就没有了， lspci | grep Eth
+
+//解绑两个网卡的 igb_uio 驱动，绑定 e1000 驱动：
+dpdk-devbind.py -u 0000:02:06.0
+dpdk-devbind.py -b e1000  02:06.0
+//启动网卡
+#ifconfig ens34 up
+#ifconfig ens35 up

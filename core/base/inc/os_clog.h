@@ -39,12 +39,13 @@ extern "C" {
 
 typedef enum {
     NONE=0,
-    FATAL=1,
-    ERROR=2,
-    WARN=3,
-    INFO=4,
-    DEBUG=5,
-    TRACE=6,
+    FATAL,
+    ERROR,
+    WARN,
+    EVENT,
+    INFO,
+    DEBUG,
+    TRACE,
     MAX_LOG_LEVEL
 } log_level_e;
 
@@ -178,6 +179,8 @@ void cdlog_printf(os_cdlog_level_e level, int domain_id, os_err_t err, char *fil
 void cdlog_hexdump_func(os_cdlog_level_e level, int domain_id, const unsigned char *data, size_t len);
 
 ////////////////////////////////////////////////////////////////////////////////
+void abort_flush_data(void);
+
 #define os_assert(expr) \
     do { \
         if (os_likely(expr)) ; \
